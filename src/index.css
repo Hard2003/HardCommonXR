@@ -1,0 +1,24 @@
+:root {
+  --brand-primary: #643bc9;
+  --brand-secondary: #30c086;
+  --brand-tertiary: #000000;
+  --accent-100: #ffffff;
+  --accent-200: #f5f5f5;
+  --accent-300: #ececec;
+  --accent-400: #99999a;
+  --accent-500: #000000;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}

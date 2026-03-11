@@ -1,0 +1,6 @@
+[
+  { "enum": 1, "label": "Present" },
+  { "enum": 0, "label": "Absent" },
+  { "enum": 2, "label": "Tardy" },
+  { "enum": 3, "label": "EarlyPickup" }
+]

@@ -1,0 +1,59 @@
+[
+    {
+        "principal": "Bobbi Blandamore",
+        "phone": "377-910-9167",
+        "school": "2XL",
+        "district": 5,
+        "address": "78737 Moulton Pass",
+        "city": "San Diego",
+        "institution": "red"
+    },
+    {
+        "principal": "Shepard Anthes",
+        "phone": "359-708-8426",
+        "district": 9,
+        "address": "1 Hermina Junction",
+        "city": "San Diego",
+        "institution": "blue"
+    },
+    {
+        "principal": "Conchita Start",
+        "phone": "342-322-9027",
+        "district": 4,
+        "address": "687 Havey Plaza",
+        "city": "San Diego",
+        "institution": "green"
+    },
+    {
+        "principal": "Viv Robotham",
+        "phone": "646-574-5469",
+        "district": 3,
+        "address": "9 Gina Parkway",
+        "city": "San Diego",
+        "institution": "purple"
+    },
+    {
+        "principal": "Carrissa Clendinning",
+        "phone": "749-791-9664",
+        "district": 10,
+        "address": "8 Hoepker Circle",
+        "city": "San Diego",
+        "institution": "yellow"
+    },
+    {
+        "principal": "Salim Kibbel",
+        "phone": "105-322-7534",
+        "district": 5,
+        "address": "102 Cherokee Hill",
+        "city": "San Diego",
+        "institution": "orange"
+    },
+    {
+        "principal": "Jeramie Itzhak",
+        "phone": "264-531-5704",
+        "district": 7,
+        "address": "7047 Esker Park",
+        "city": "San Diego",
+        "institution": "indigo"
+    }
+]

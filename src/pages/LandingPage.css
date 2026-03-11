@@ -1,0 +1,12 @@
+.landing-page{
+    display:flex;
+    max-width: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.landing-hero-description{
+    max-width: 80%;
+    font-size: 2rem;
+    box-shadow: 5px 5px var(--accent-500), 10px 10px var(  --brand-secondary)
+}

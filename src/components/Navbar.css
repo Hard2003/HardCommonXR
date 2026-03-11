@@ -1,0 +1,27 @@
+
+.navbar{
+    position:sticky;
+    padding:.25rem 2rem ;
+  }
+  .navbar .nav-home{
+    align-items: center;
+    display:flex;
+    margin-right:auto;
+  }
+  .navbar .container-fluid{
+    align-items: center;
+    justify-content: flex-start;
+    gap:2rem;
+  }
+  .nav-link {
+    color: var(--accent-500);
+    background-color: var(--accent-100);
+    margin-top: auto;
+    margin-bottom: auto;
+    /* border-bottom: 2px var(--accent-300) solid; */
+  }
+  .nav-link.active{
+    color: var(--brand-primary);
+    font-weight: 700;
+    border-bottom: 2px var(--brand-primary) solid;
+  }
