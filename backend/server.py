@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import mysql.connector
 import jwt
+from db_init import init_database
 
 SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
 SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
@@ -348,4 +349,6 @@ def run(host=SERVER_HOST, port=SERVER_PORT):
 
 
 if __name__ == "__main__":
+    print("🚀 Starting TCXR Cares Backend...")
+    init_database()
     run()
