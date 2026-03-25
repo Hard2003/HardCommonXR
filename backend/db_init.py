@@ -19,17 +19,29 @@ def init_database():
         "database": os.getenv("DB_NAME", "tcxr_cares"),
     }
     
+    print(f"🔌 DB Config: host={db_config['host']}, port={db_config['port']}, user={db_config['user']}, db={db_config['database']}")
+    
     try:
         connection = mysql.connector.connect(**db_config)
+        print("✅ Database connected!")
         cursor = connection.cursor()
         
         # Check if already initialized
         cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s", (db_config['database'],))
-        if cursor.fetchone()[0] > 0:
-            print("✓ Database already initialized, skipping...")
-            cursor.close()
-            connection.close()
-            return
+        table_count = cursor.fetchone()[0]
+        print(f"📊 Tables found: {table_count}")
+        
+        if table_count > 0:
+            # Check if users table has data
+            cursor.execute("SELECT COUNT(*) FROM users")
+            user_count = cursor.fetchone()[0]
+            print(f"👤 Users in database: {user_count}")
+            
+            if user_count > 0:
+                print("✓ Database already initialized with users, skipping...")
+                cursor.close()
+                connection.close()
+                return
         
         print("📋 Creating database tables...")
         
@@ -119,15 +131,21 @@ def init_database():
         # Load default users
         print("🔐 Creating default users...")
         users = [("admin", "admin123", "admin"), ("teacher", "teacher123", "teacher")]
+        created_count = 0
         for username, password, role in users:
             try:
                 cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
                               (username, password, role))
-            except:
-                pass  # User might already exist
+                created_count += 1
+                print(f"   ✅ Created user: {username}")
+            except Error as e:
+                print(f"   ⚠️  Could not create user {username}: {e}")
         
         connection.commit()
-        print("✅ Default users created")
+        if created_count > 0:
+            print(f"✅ Created {created_count} default users")
+        else:
+            print("ℹ️  No new users created (may already exist)")
         
         # Load test data from JSON files
         base_path = os.path.join(os.path.dirname(__file__), "testdata")
@@ -238,7 +256,9 @@ def init_database():
         connection.close()
         
     except Error as e:
-        print(f"⚠️  Database initialization skipped (will retry on next restart): {e}")
+        print(f"❌ Database initialization ERROR: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     init_database()
