@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchStudents, recordGrades, fetchGrades } from '../apiCalls';
+import { fetchStudents, recordGrades } from '../apiCalls';
 import '../pages/GradesInput.css';
 
 const GradesInput = () => {
