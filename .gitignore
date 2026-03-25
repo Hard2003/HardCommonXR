@@ -25,24 +25,3 @@ yarn-error.log*
 /perspective
 
 *.local.*
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS files
-Thumbs.db

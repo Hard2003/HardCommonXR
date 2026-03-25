@@ -1,28 +1,70 @@
 import json
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
+from datetime import datetime, timedelta
+
+import mysql.connector
+import jwt
 
 SERVER_PORT = 3080
-# Load JSON files at startup
-with open("./testdata/studentlist.json") as f:
-    student_list = json.load(f)
+SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
+JWT_SECRET = os.getenv("JWT_SECRET", "your_secret_key_change_in_production")
 
-with open("./testdata/institutionlist.json") as f:
-    institution_list = json.load(f)
+DB_CONFIG = {
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "3307")),
+    "user": os.getenv("DB_USER", "admin"),
+    "password": os.getenv("DB_PASSWORD", "admin123"),
+    "database": os.getenv("DB_NAME", "tcxr_cares"),
+}
 
-with open("./testdata/grades.json") as f:
-    grades_data = json.load(f)
 
-with open("./testdata/student_attendance.json") as f:
-    attendance_data = json.load(f)
+def create_token(username, role):
+    """Generate JWT token valid for 24 hours"""
+    payload = {
+        'username': username,
+        'role': role,
+        'iat': datetime.utcnow(),
+        'exp': datetime.utcnow() + timedelta(hours=24)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
-with open("./testdata/attendance_enum_mapping.json") as f:
-    attendance_mapping = json.load(f)
 
+def verify_token(token):
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+
+def fetch_all(query, params=None):
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cur = conn.cursor(dictionary=True)
+    cur.execute(query, params or ())
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def execute_query(query, params=None):
+    """Execute INSERT/UPDATE/DELETE queries"""
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    cur.execute(query, params or ())
+    conn.commit()
+    result = {"rows_affected": cur.rowcount}
+    cur.close()
+    conn.close()
+    return result
 
 
 class SimpleServer(BaseHTTPRequestHandler):
-
     def _set_headers(self, status=200):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -31,85 +73,277 @@ class SimpleServer(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "*")
         self.end_headers()
 
-    # Handle OPTIONS (CORS preflight)
     def do_OPTIONS(self):
         self._set_headers()
 
-    # ---------------------------
-    # Handle GET routes
-    # ---------------------------
     def do_GET(self):
         path = self.path
         print(path)
-        
-        # Handle query parameters for institution student roster
+
+        # Extract token from Authorization header
+        auth_header = self.headers.get('Authorization', '')
+        token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else None
+
+        # Verify token for protected endpoints
+        if not path.startswith('/api/auth/'):
+            if not token or not verify_token(token):
+                self._set_headers(401)
+                self.wfile.write(json.dumps({'error': 'Unauthorized: Invalid or missing token'}).encode())
+                return
+
         if path.startswith("/api/institution/studentRoster"):
-            # Parse query parameters using urlparse
             parsed_url = urlparse(path)
             params = parse_qs(parsed_url.query)
-            
+
             institution_name = params.get("institution", [None])[0]
-            if institution_name:
-                print(f"Filtering students for institution: {institution_name}")
-                # Filter students by institution
-                filtered_students = [student for student in student_list if student.get("institution") == institution_name]
-                print(f"Found {len(filtered_students)} students for {institution_name}")
-                self._set_headers()
-                self.wfile.write(json.dumps(filtered_students).encode("utf-8"))
-                return
-            else:
+            if not institution_name:
                 self._set_headers(400)
                 self.wfile.write(json.dumps({"error": "Institution parameter required"}).encode("utf-8"))
                 return
-        
-        match(path):
+
+            roster = fetch_all(
+                """
+                SELECT
+                    id,
+                    uuid,
+                    first_name,
+                    last_name,
+                    primary_guardian_email,
+                    gender,
+                    DATE_FORMAT(dob, '%c/%e/%Y') AS dob,
+                    institution_code AS institution,
+                    grade
+                FROM students
+                WHERE institution_code = %s
+                ORDER BY id
+                """,
+                (institution_name,),
+            )
+            self._set_headers()
+            self.wfile.write(json.dumps(roster).encode("utf-8"))
+            return
+
+        match path:
             case "/api/students":
+                students = fetch_all(
+                    """
+                    SELECT
+                        id,
+                        uuid,
+                        first_name,
+                        last_name,
+                        primary_guardian_email,
+                        gender,
+                        DATE_FORMAT(dob, '%c/%e/%Y') AS dob,
+                        institution_code AS institution,
+                        grade
+                    FROM students
+                    ORDER BY id
+                    """
+                )
                 self._set_headers()
-                self.wfile.write(json.dumps(student_list).encode("utf-8"))
+                self.wfile.write(json.dumps(students).encode("utf-8"))
 
             case "/api/institutions":
+                institutions = fetch_all(
+                    """
+                    SELECT
+                        principal,
+                        phone,
+                        school,
+                        district,
+                        address,
+                        city,
+                        institution_code AS institution
+                    FROM institutions
+                    ORDER BY institution_code
+                    """
+                )
                 self._set_headers()
-                self.wfile.write(json.dumps(institution_list).encode("utf-8"))
+                self.wfile.write(json.dumps(institutions).encode("utf-8"))
 
             case "/api/grades":
+                grades = fetch_all(
+                    """
+                    SELECT
+                        student_id AS id,
+                        fine_motor,
+                        gross_motor,
+                        social_emotional,
+                        early_literacy,
+                        early_numeracy,
+                        independence,
+                        school_year,
+                        grading_quarter
+                    FROM grades
+                    ORDER BY student_id, school_year, grading_quarter
+                    """
+                )
                 self._set_headers()
-                self.wfile.write(json.dumps(grades_data).encode("utf-8"))
+                self.wfile.write(json.dumps(grades).encode("utf-8"))
 
             case "/api/attendance":
+                attendance = fetch_all(
+                    """
+                    SELECT
+                        student_id AS id,
+                        DATE_FORMAT(attendance_date, '%Y-%m-%d') AS date,
+                        status_code AS status
+                    FROM student_attendance
+                    ORDER BY attendance_date, student_id
+                    """
+                )
                 self._set_headers()
-                self.wfile.write(json.dumps(attendance_data).encode("utf-8"))
+                self.wfile.write(json.dumps(attendance).encode("utf-8"))
 
             case "/api/attendance-mapping":
+                mapping = fetch_all(
+                    """
+                    SELECT
+                        enum_code AS enum,
+                        label
+                    FROM attendance_status_mapping
+                    ORDER BY enum_code
+                    """
+                )
                 self._set_headers()
-                self.wfile.write(json.dumps(attendance_mapping).encode("utf-8"))
+                self.wfile.write(json.dumps(mapping).encode("utf-8"))
 
             case _:
                 self._set_headers(404)
                 self.wfile.write(json.dumps({"error": "Not Found"}).encode("utf-8"))
 
-    # ---------------------------
-    # Handle POST routes
-    # ---------------------------
     def do_POST(self):
         path = self.path
-        match(path):
-            case "/api/students":
-                # Read request body (if needed)
-                content_length = int(self.headers.get("Content-Length", 0))
-                post_body = self.rfile.read(content_length).decode("utf-8")
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length).decode("utf-8")
 
-                # Mimic Express behavior: return empty JSON {}
-                self._set_headers()
-                self.wfile.write(json.dumps({}).encode("utf-8"))
+        # Extract token from Authorization header
+        auth_header = self.headers.get('Authorization', '')
+        token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else None
+
+        match path:
+            case "/api/auth/login":
+                try:
+                    data = json.loads(body)
+                    username = data.get('username', '')
+                    password = data.get('password', '')
+                    
+                    # Simple credential check (in production, use real database)
+                    valid_users = {
+                        'admin': {'password': 'admin123', 'role': 'admin'},
+                        'teacher': {'password': 'teacher123', 'role': 'teacher'}
+                    }
+                    
+                    if username in valid_users and valid_users[username]['password'] == password:
+                        token = create_token(username, valid_users[username]['role'])
+                        self._set_headers(200)
+                        self.wfile.write(json.dumps({'token': token, 'role': valid_users[username]['role']}).encode())
+                    else:
+                        self._set_headers(401)
+                        self.wfile.write(json.dumps({'error': 'Invalid credentials'}).encode())
+                except Exception as e:
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({'error': str(e)}).encode())
+
+            case "/api/attendance/record":
+                # Verify token for protected endpoint
+                if not token or not verify_token(token):
+                    self._set_headers(401)
+                    self.wfile.write(json.dumps({'error': 'Unauthorized'}).encode())
+                    return
+                
+                try:
+                    data = json.loads(body)
+                    student_id = data.get('student_id')
+                    attendance_date = data.get('date')
+                    status_code = data.get('status')
+                    
+                    execute_query(
+                        """
+                        INSERT INTO student_attendance (student_id, attendance_date, status_code)
+                        VALUES (%s, %s, %s)
+                        ON DUPLICATE KEY UPDATE status_code = %s
+                        """,
+                        (student_id, attendance_date, status_code, status_code)
+                    )
+                    
+                    self._set_headers(201)
+                    self.wfile.write(json.dumps({'success': True, 'message': 'Attendance recorded'}).encode())
+                except Exception as e:
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({'error': str(e)}).encode())
+
+            case "/api/grades/record":
+                # Verify token for protected endpoint
+                if not token or not verify_token(token):
+                    self._set_headers(401)
+                    self.wfile.write(json.dumps({'error': 'Unauthorized'}).encode())
+                    return
+                
+                try:
+                    data = json.loads(body)
+                    student_id = int(data.get('student_id', 0))
+                    school_year = int(data.get('school_year', 0))
+                    grading_quarter_str = data.get('grading_quarter', 'Q1')
+                    
+                    # Convert Q1/Q2/Q3/Q4 to 1/2/3/4
+                    quarter_map = {'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4}
+                    grading_quarter = quarter_map.get(grading_quarter_str, 1)
+                    
+                    # Convert numerical grades to text descriptors
+                    def grade_to_text(score):
+                        if score == '' or score is None:
+                            return None
+                        try:
+                            score = int(score)
+                            if score >= 80:
+                                return 'Proficient'
+                            elif score >= 60:
+                                return 'Developing'
+                            else:
+                                return 'Emerging'
+                        except:
+                            return None
+                    
+                    fine_motor = grade_to_text(data.get('fine_motor'))
+                    gross_motor = grade_to_text(data.get('gross_motor'))
+                    social_emotional = grade_to_text(data.get('social_emotional'))
+                    early_literacy = grade_to_text(data.get('early_literacy'))
+                    early_numeracy = grade_to_text(data.get('early_numeracy'))
+                    independence = grade_to_text(data.get('independence'))
+                    
+                    execute_query(
+                        """
+                        INSERT INTO grades (student_id, fine_motor, gross_motor, social_emotional, 
+                                          early_literacy, early_numeracy, independence, 
+                                          school_year, grading_quarter)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON DUPLICATE KEY UPDATE
+                            fine_motor = %s, gross_motor = %s, social_emotional = %s,
+                            early_literacy = %s, early_numeracy = %s, independence = %s
+                        """,
+                        (student_id, fine_motor, gross_motor, social_emotional,
+                         early_literacy, early_numeracy, independence,
+                         school_year, grading_quarter,
+                         fine_motor, gross_motor, social_emotional,
+                         early_literacy, early_numeracy, independence)
+                    )
+                    
+                    self._set_headers(201)
+                    self.wfile.write(json.dumps({'success': True, 'message': 'Grades recorded'}).encode())
+                except Exception as e:
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({'error': str(e)}).encode())
+
             case _:
                 self._set_headers(404)
                 self.wfile.write(json.dumps({"error": "Not Found"}).encode("utf-8"))
 
 
-# Run the server
-def run(port=SERVER_PORT):
-    server = HTTPServer(("localhost", port), SimpleServer)
-    print(f"Mock server running on http://localhost:{port}")
+def run(host=SERVER_HOST, port=SERVER_PORT):
+    server = HTTPServer((host, port), SimpleServer)
+    print(f"Mock server running on http://{host}:{port}")
     server.serve_forever()
 
 

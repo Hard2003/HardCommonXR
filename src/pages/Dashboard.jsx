@@ -62,6 +62,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (data.students.length > 0) {
+      // Clear all previous plots before recreating
+      try {
+        if (document.getElementById('admin-chart')) Plotly.purge('admin-chart');
+        if (document.getElementById('admin-attendance-chart')) Plotly.purge('admin-attendance-chart');
+        if (document.getElementById('admin-grade-chart')) Plotly.purge('admin-grade-chart');
+        if (document.getElementById('admin-trends-chart')) Plotly.purge('admin-trends-chart');
+        if (document.getElementById('teacher-performance-chart')) Plotly.purge('teacher-performance-chart');
+        if (document.getElementById('teacher-attendance-chart')) Plotly.purge('teacher-attendance-chart');
+        if (document.getElementById('teacher-quarterly-chart')) Plotly.purge('teacher-quarterly-chart');
+      } catch (e) {
+        // Ignore purge errors
+      }
+
       // Recreate charts when role changes
       setTimeout(() => {
         if (userRole === 'admin') {
@@ -74,7 +87,7 @@ export default function Dashboard() {
           createTeacherAttendanceChart(data.attendance, data.attendanceMapping);
           createQuarterlyComparisonChart(data.grades);
         }
-      }, 100);
+      }, 50);
     }
   }, [userRole, data]);
 

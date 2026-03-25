@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
 
 // Create context for data caching
 const DataContext = createContext();
@@ -21,17 +21,17 @@ export const DataProvider = ({ children }) => {
   });
 
   // Cache students data
-  const cacheStudents = (data) => {
+  const cacheStudents = useCallback((data) => {
     setCache(prev => ({ ...prev, students: data }));
-  };
+  }, []);
 
   // Cache institutions data
-  const cacheInstitutions = (data) => {
+  const cacheInstitutions = useCallback((data) => {
     setCache(prev => ({ ...prev, institutions: data }));
-  };
+  }, []);
 
   // Cache institution-specific students
-  const cacheInstitutionStudents = (institution, data) => {
+  const cacheInstitutionStudents = useCallback((institution, data) => {
     setCache(prev => ({ 
       ...prev, 
       institutionStudents: { 
@@ -39,37 +39,49 @@ export const DataProvider = ({ children }) => {
         [institution]: data 
       }
     }));
-  };
+  }, []);
 
   // Get cached students
-  const getCachedStudents = () => cache.students;
+  const getCachedStudents = useCallback(() => cache.students, [cache.students]);
 
   // Get cached institutions
-  const getCachedInstitutions = () => cache.institutions;
+  const getCachedInstitutions = useCallback(() => cache.institutions, [cache.institutions]);
 
   // Get cached institution students
-  const getCachedInstitutionStudents = (institution) => {
-    return cache.institutionStudents[institution] || null;
-  };
+  const getCachedInstitutionStudents = useCallback(
+    (institution) => cache.institutionStudents[institution] || null,
+    [cache.institutionStudents]
+  );
 
   // Clear all cache (useful for refresh)
-  const clearCache = () => {
+  const clearCache = useCallback(() => {
     setCache({
       students: null,
       institutions: null,
       institutionStudents: {}
     });
-  };
+  }, []);
 
-  const value = {
-    cacheStudents,
-    cacheInstitutions,
-    cacheInstitutionStudents,
-    getCachedStudents,
-    getCachedInstitutions,
-    getCachedInstitutionStudents,
-    clearCache
-  };
+  const value = useMemo(
+    () => ({
+      cacheStudents,
+      cacheInstitutions,
+      cacheInstitutionStudents,
+      getCachedStudents,
+      getCachedInstitutions,
+      getCachedInstitutionStudents,
+      clearCache,
+    }),
+    [
+      cacheStudents,
+      cacheInstitutions,
+      cacheInstitutionStudents,
+      getCachedStudents,
+      getCachedInstitutions,
+      getCachedInstitutionStudents,
+      clearCache,
+    ]
+  );
 
   return (
     <DataContext.Provider value={value}>
