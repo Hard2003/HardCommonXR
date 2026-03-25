@@ -230,19 +230,20 @@ class SimpleServer(BaseHTTPRequestHandler):
                     username = data.get('username', '')
                     password = data.get('password', '')
                     
-                    # Simple credential check (in production, use real database)
-                    valid_users = {
-                        'admin': {'password': 'admin123', 'role': 'admin'},
-                        'teacher': {'password': 'teacher123', 'role': 'teacher'}
-                    }
+                    # Check credentials against database
+                    users = fetch_all(
+                        "SELECT id, username, role FROM users WHERE username = %s AND password = %s",
+                        (username, password)
+                    )
                     
-                    if username in valid_users and valid_users[username]['password'] == password:
-                        token = create_token(username, valid_users[username]['role'])
+                    if users and len(users) > 0:
+                        user = users[0]
+                        token = create_token(user['username'], user['role'])
                         self._set_headers(200)
-                        self.wfile.write(json.dumps({'token': token, 'role': valid_users[username]['role']}).encode())
+                        self.wfile.write(json.dumps({'token': token, 'role': user['role']}).encode())
                     else:
                         self._set_headers(401)
-                        self.wfile.write(json.dumps({'error': 'Invalid credentials'}).encode())
+                        self.wfile.write(json.dumps({'error': 'Invalid username or password'}).encode())
                 except Exception as e:
                     self._set_headers(400)
                     self.wfile.write(json.dumps({'error': str(e)}).encode())
