@@ -6,8 +6,18 @@ from datetime import datetime, timedelta
 
 import mysql.connector
 import jwt
-from db_init import init_database
 from password_utils import hash_password, verify_password
+
+# Try to import initialization functions
+try:
+    from db_init import init_database
+except:
+    init_database = None
+
+try:
+    from init_tables import initialize
+except:
+    initialize = None
 
 SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
 SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
@@ -418,5 +428,19 @@ def run(host=SERVER_HOST, port=SERVER_PORT):
 
 if __name__ == "__main__":
     print("🚀 Starting TCXR Cares Backend...")
-    init_database()
+    
+    # Initialize database tables and users
+    try:
+        if initialize:
+            print("📋 Initializing database tables...")
+            initialize()
+        elif init_database:
+            print("📋 Running database initialization...")
+            init_database()
+        else:
+            print("⚠️  Warning: Could not find initialization function")
+    except Exception as e:
+        print(f"⚠️  Initialization error (non-blocking): {e}")
+    
+    print("✅ Backend ready to start")
     run()
