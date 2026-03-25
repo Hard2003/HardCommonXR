@@ -69,7 +69,7 @@ export default function StudentList() {
     if (filterInstitution && filterGrade && !uniqueGrades.includes(filterGrade)) {
       setFilterGrade("");
     }
-  }, [filterInstitution, students]);
+  }, [filterInstitution, filterGrade, students]);
 
   useEffect(() => {
     let filtered = students;
