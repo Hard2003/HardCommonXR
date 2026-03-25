@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "express": "^4.21.2",
     "plotly.js": "^3.3.1",
+    "plotly.js-basic-dist-min": "^3.3.1",
     "plotly.js-dist-min": "^3.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
