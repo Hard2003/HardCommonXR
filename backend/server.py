@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import mysql.connector
 import jwt
 from db_init import init_database
+from password_utils import hash_password, verify_password
 
 SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
 SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
@@ -230,20 +231,86 @@ class SimpleServer(BaseHTTPRequestHandler):
                     username = data.get('username', '')
                     password = data.get('password', '')
                     
-                    # Check credentials against database
+                    if not username or not password:
+                        self._set_headers(400)
+                        self.wfile.write(json.dumps({'error': 'Username and password required'}).encode())
+                        return
+                    
+                    # Get user from database
                     users = fetch_all(
-                        "SELECT id, username, role FROM users WHERE username = %s AND password = %s",
-                        (username, password)
+                        "SELECT id, username, password, role FROM users WHERE username = %s",
+                        (username,)
                     )
                     
                     if users and len(users) > 0:
                         user = users[0]
-                        token = create_token(user['username'], user['role'])
-                        self._set_headers(200)
-                        self.wfile.write(json.dumps({'token': token, 'role': user['role']}).encode())
+                        # Verify password hash
+                        if verify_password(user['password'], password):
+                            token = create_token(user['username'], user['role'])
+                            self._set_headers(200)
+                            self.wfile.write(json.dumps({
+                                'token': token, 
+                                'role': user['role'],
+                                'username': user['username']
+                            }).encode())
+                        else:
+                            self._set_headers(401)
+                            self.wfile.write(json.dumps({'error': 'Invalid password'}).encode())
                     else:
                         self._set_headers(401)
-                        self.wfile.write(json.dumps({'error': 'Invalid username or password'}).encode())
+                        self.wfile.write(json.dumps({'error': 'User not found'}).encode())
+                except Exception as e:
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({'error': str(e)}).encode())
+
+            case "/api/auth/signup":
+                try:
+                    data = json.loads(body)
+                    username = data.get('username', '').strip()
+                    password = data.get('password', '')
+                    role = data.get('role', 'teacher')  # Default role is teacher
+                    
+                    # Validation
+                    if not username or len(username) < 3:
+                        self._set_headers(400)
+                        self.wfile.write(json.dumps({'error': 'Username must be at least 3 characters'}).encode())
+                        return
+                    
+                    if not password or len(password) < 6:
+                        self._set_headers(400)
+                        self.wfile.write(json.dumps({'error': 'Password must be at least 6 characters'}).encode())
+                        return
+                    
+                    # Check if user already exists
+                    existing = fetch_all(
+                        "SELECT id FROM users WHERE username = %s",
+                        (username,)
+                    )
+                    
+                    if existing:
+                        self._set_headers(409)
+                        self.wfile.write(json.dumps({'error': 'Username already taken'}).encode())
+                        return
+                    
+                    # Hash password
+                    hashed_password = hash_password(password)
+                    
+                    # Create user in database
+                    execute_query(
+                        "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
+                        (username, hashed_password, role)
+                    )
+                    
+                    # Create token and return
+                    token = create_token(username, role)
+                    self._set_headers(201)
+                    self.wfile.write(json.dumps({
+                        'token': token,
+                        'role': role,
+                        'username': username,
+                        'message': 'Account created successfully'
+                    }).encode())
+                    
                 except Exception as e:
                     self._set_headers(400)
                     self.wfile.write(json.dumps({'error': str(e)}).encode())

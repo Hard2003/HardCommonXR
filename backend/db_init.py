@@ -1,12 +1,8 @@
-"""
-Database initialization module for TCXR Cares
-Automatically creates tables and loads test data on first startup
-"""
-
 import json
 import os
 import mysql.connector
 from mysql.connector import Error
+from password_utils import hash_password, is_password_hashed
 
 def init_database():
     """Initialize database with schema and test data"""
@@ -129,8 +125,10 @@ def init_database():
             created_count = 0
             for username, password, role in users_to_create:
                 try:
+                    # Hash password before storing
+                    hashed_pwd = hash_password(password)
                     cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
-                                  (username, password, role))
+                                  (username, hashed_pwd, role))
                     created_count += 1
                     print(f"   ✅ Created user: {username}")
                 except Error as e:

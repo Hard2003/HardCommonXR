@@ -4,26 +4,107 @@ import { login } from '../apiCalls';
 import '../pages/LoginPage.css';
 
 const LoginPage = ({ setIsAuthenticated }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [isSignup, setIsSignup] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    confirmPassword: ''
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (error) setError('');
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      await login(username, password);
+      await login(formData.username, formData.password);
       setIsAuthenticated(true);
       navigate('/dashboard');
     } catch (err) {
-      setError('Invalid username or password');
+      setError(err.message || 'Invalid username or password');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    // Validation
+    if (!formData.username || !formData.password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (formData.username.length < 3) {
+      setError('Username must be at least 3 characters');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3080';
+      
+      const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+          role: 'teacher'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed');
+      }
+
+      // Success - store credentials and login
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+      localStorage.setItem('username', data.username);
+      
+      setIsAuthenticated(true);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsSignup(!isSignup);
+    setError('');
+    setFormData({ username: '', password: '', confirmPassword: '' });
   };
 
   return (
@@ -32,15 +113,31 @@ const LoginPage = ({ setIsAuthenticated }) => {
         <h1>TCXR Cares</h1>
         <p className="subtitle">Educational Management System</p>
         
-        <form onSubmit={handleSubmit}>
+        <div className="auth-toggle">
+          <button 
+            className={`toggle-btn ${!isSignup ? 'active' : ''}`}
+            onClick={() => !isSignup || toggleMode()}
+          >
+            Log In
+          </button>
+          <button 
+            className={`toggle-btn ${isSignup ? 'active' : ''}`}
+            onClick={() => isSignup || toggleMode()}
+          >
+            Sign Up
+          </button>
+        </div>
+
+        <form onSubmit={isSignup ? handleSignup : handleLogin}>
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
               id="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin or teacher"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              placeholder={isSignup ? "Create a username" : "Enter username"}
               disabled={loading}
               required
             />
@@ -51,28 +148,47 @@ const LoginPage = ({ setIsAuthenticated }) => {
             <input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder={isSignup ? "At least 6 characters" : "Enter password"}
               disabled={loading}
               required
             />
           </div>
 
+          {isSignup && (
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm your password"
+                disabled={loading}
+                required
+              />
+            </div>
+          )}
+
           {error && <div className="error-message">{error}</div>}
 
           <button type="submit" className="login-button" disabled={loading}>
-            {loading ? 'Logging in...' : 'Log In'}
+            {loading ? (isSignup ? 'Creating Account...' : 'Logging in...') : (isSignup ? 'Sign Up' : 'Log In')}
           </button>
         </form>
 
-        <div className="demo-credentials">
-          <p className="demo-title">Demo Credentials:</p>
-          <ul>
-            <li><strong>Admin:</strong> username: <code>admin</code>, password: <code>admin123</code></li>
-            <li><strong>Teacher:</strong> username: <code>teacher</code>, password: <code>teacher123</code></li>
-          </ul>
-        </div>
+        {!isSignup && (
+          <div className="demo-credentials">
+            <p className="demo-title">Demo Credentials:</p>
+            <ul>
+              <li><strong>Admin:</strong> <code>admin</code> / <code>admin123</code></li>
+              <li><strong>Teacher:</strong> <code>teacher</code> / <code>teacher123</code></li>
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
