@@ -58,7 +58,7 @@ export default function Dashboard() {
     };
 
     loadAllData();
-  }, []);
+  }, [userRole]);
 
   useEffect(() => {
     if (data.students.length > 0) {
