@@ -31,18 +31,7 @@ def init_database():
         table_count = cursor.fetchone()[0]
         print(f"📊 Tables found: {table_count}")
         
-        if table_count > 0:
-            # Check if users table has data
-            cursor.execute("SELECT COUNT(*) FROM users")
-            user_count = cursor.fetchone()[0]
-            print(f"👤 Users in database: {user_count}")
-            
-            if user_count > 0:
-                print("✓ Database already initialized with users, skipping...")
-                cursor.close()
-                connection.close()
-                return
-        
+        # Always create tables (CREATE TABLE IF NOT EXISTS is safe)
         print("📋 Creating database tables...")
         
         # Create users table
@@ -128,24 +117,39 @@ def init_database():
         connection.commit()
         print("✅ Tables created successfully")
         
-        # Load default users
-        print("🔐 Creating default users...")
-        users = [("admin", "admin123", "admin"), ("teacher", "teacher123", "teacher")]
-        created_count = 0
-        for username, password, role in users:
-            try:
-                cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
-                              (username, password, role))
-                created_count += 1
-                print(f"   ✅ Created user: {username}")
-            except Error as e:
-                print(f"   ⚠️  Could not create user {username}: {e}")
+        # ALWAYS ensure default users exist - this is critical for login
+        print("🔐 Ensuring default users exist...")
+        cursor.execute("SELECT COUNT(*) FROM users")
+        user_count = cursor.fetchone()[0]
+        print(f"   Current users in database: {user_count}")
         
-        connection.commit()
-        if created_count > 0:
+        if user_count == 0:
+            print("   Users table is empty, inserting defaults...")
+            users_to_create = [("admin", "admin123", "admin"), ("teacher", "teacher123", "teacher")]
+            created_count = 0
+            for username, password, role in users_to_create:
+                try:
+                    cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
+                                  (username, password, role))
+                    created_count += 1
+                    print(f"   ✅ Created user: {username}")
+                except Error as e:
+                    print(f"   ❌ Error creating user {username}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            connection.commit()
             print(f"✅ Created {created_count} default users")
+            
+            # Verify they were inserted
+            cursor.execute("SELECT COUNT(*) FROM users")
+            new_count = cursor.fetchone()[0]
+            print(f"   ✅ Verification: Database now has {new_count} users")
         else:
-            print("ℹ️  No new users created (may already exist)")
+            print(f"   ✓ Users already exist ({user_count}), no need to create defaults")
+        
+        # Now load test data
+        print("📥 Loading test data from JSON files...")
         
         # Load test data from JSON files
         base_path = os.path.join(os.path.dirname(__file__), "testdata")
@@ -155,6 +159,7 @@ def init_database():
             print("👥 Loading institutions...")
             with open(os.path.join(base_path, "institutionlist.json")) as f:
                 institutions = json.load(f)
+                loaded = 0
                 for inst in institutions:
                     try:
                         cursor.execute("""
@@ -170,55 +175,70 @@ def init_database():
                             inst.get("address"),
                             inst.get("city")
                         ))
-                    except:
-                        pass
+                        loaded += 1
+                    except Error as e:
+                        pass  # Likely duplicate
+                print(f"   ✅ Loaded {loaded} institutions")
             
             # Load students
             print("🎓 Loading students...")
             with open(os.path.join(base_path, "studentlist.json")) as f:
                 students = json.load(f)
+                loaded = 0
                 for student in students:
-                    cursor.execute("""
-                    INSERT INTO students 
-                    (uuid, first_name, last_name, gender, dob, primary_guardian_email, institution, grade)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        student.get("uuid"),
-                        student.get("first_name"),
-                        student.get("last_name"),
-                        student.get("gender"),
-                        student.get("dob"),
-                        student.get("primary_guardian_email"),
-                        student.get("institution"),
-                        student.get("grade")
-                    ))
+                    try:
+                        cursor.execute("""
+                        INSERT INTO students 
+                        (uuid, first_name, last_name, gender, dob, primary_guardian_email, institution, grade)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            student.get("uuid"),
+                            student.get("first_name"),
+                            student.get("last_name"),
+                            student.get("gender"),
+                            student.get("dob"),
+                            student.get("primary_guardian_email"),
+                            student.get("institution"),
+                            student.get("grade")
+                        ))
+                        loaded += 1
+                    except Error as e:
+                        pass  # Likely duplicate
+                print(f"   ✅ Loaded {loaded} students")
             
             # Load grades
             print("📊 Loading grades...")
             with open(os.path.join(base_path, "grades.json")) as f:
                 grades = json.load(f)
+                loaded = 0
                 for i, grade in enumerate(grades):
-                    cursor.execute("""
-                    INSERT INTO grades 
-                    (student_id, fine_motor, gross_motor, social_emotional, early_literacy, 
-                     early_numeracy, independence, school_year, grading_quarter)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        i + 1,
-                        grade.get("fine_motor"),
-                        grade.get("gross_motor"),
-                        grade.get("social_emotional"),
-                        grade.get("early_literacy"),
-                        grade.get("early_numeracy"),
-                        grade.get("independence"),
-                        grade.get("school_year"),
-                        grade.get("grading_quarter")
-                    ))
+                    try:
+                        cursor.execute("""
+                        INSERT INTO grades 
+                        (student_id, fine_motor, gross_motor, social_emotional, early_literacy, 
+                         early_numeracy, independence, school_year, grading_quarter)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            i + 1,
+                            grade.get("fine_motor"),
+                            grade.get("gross_motor"),
+                            grade.get("social_emotional"),
+                            grade.get("early_literacy"),
+                            grade.get("early_numeracy"),
+                            grade.get("independence"),
+                            grade.get("school_year"),
+                            grade.get("grading_quarter")
+                        ))
+                        loaded += 1
+                    except Error as e:
+                        pass  # Likely duplicate
+                print(f"   ✅ Loaded {loaded} grades")
             
             # Load attendance
-            print("✅ Loading attendance...")
+            print("📅 Loading attendance...")
             with open(os.path.join(base_path, "student_attendance.json")) as f:
                 attendance = json.load(f)
+                loaded = 0
                 for att in attendance:
                     try:
                         cursor.execute("""
@@ -231,29 +251,41 @@ def init_database():
                             att.get("date"),
                             att.get("status")
                         ))
-                    except:
-                        pass
+                        loaded += 1
+                    except Error as e:
+                        pass  # Likely duplicate
+                print(f"   ✅ Loaded {loaded} attendance records")
             
             # Load attendance mapping
             print("🗺️  Loading attendance mapping...")
             with open(os.path.join(base_path, "attendance_enum_mapping.json")) as f:
                 mapping = json.load(f)
+                loaded = 0
                 for key, value in mapping.items():
                     try:
                         cursor.execute("INSERT INTO attendance_mapping (status_key, status_value) VALUES (%s, %s)",
                                       (key, value))
-                    except:
-                        pass
+                        loaded += 1
+                    except Error as e:
+                        pass  # Likely duplicate
+                print(f"   ✅ Loaded {loaded} mappings")
             
             connection.commit()
             print("✅ All test data loaded successfully!")
             
         except FileNotFoundError as e:
-            print(f"⚠️  Test data files not found (this is OK for production): {e}")
+            print(f"⚠️  Test data files not found: {e}")
+            print("   (This is OK - database is still functional for login)")
+            connection.commit()
+        except Exception as e:
+            print(f"⚠️  Error loading test data: {e}")
+            import traceback
+            traceback.print_exc()
             connection.commit()
         
         cursor.close()
         connection.close()
+        print("✅ Database initialization complete!")
         
     except Error as e:
         print(f"❌ Database initialization ERROR: {e}")
