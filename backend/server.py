@@ -3,6 +3,7 @@ import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
 from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional
 
 import mysql.connector
 import jwt
@@ -43,14 +44,14 @@ def verify_token(token):
         return None
 
 
-def fetch_all(query, params=None):
+def fetch_all(query: str, params: Optional[tuple] = None) -> List[Dict[str, Any]]:
     conn = mysql.connector.connect(**DB_CONFIG)
     cur = conn.cursor(dictionary=True)
     cur.execute(query, params or ())
     rows = cur.fetchall()
     cur.close()
     conn.close()
-    return rows
+    return rows  # type: ignore
 
 
 def execute_query(query, params=None):
