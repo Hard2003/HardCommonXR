@@ -12,6 +12,7 @@ import {
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshCount, setRefreshCount] = useState(0);
   const [data, setData] = useState({
     students: [],
     institutions: [],
@@ -21,44 +22,54 @@ export default function Dashboard() {
   });
   const [userRole, setUserRole] = useState('admin');
 
+  // Function to refetch all data (can be called after changes)
+  const refetchData = async () => {
+    try {
+      setLoading(true);
+      const [students, institutions, grades, attendance, attendanceMapping] = await Promise.all([
+        fetchStudents(),
+        fetchInstitutionList(),
+        fetchGrades(),
+        fetchAttendance(),
+        fetchAttendanceMapping()
+      ]);
+
+      setData({ students, institutions, grades, attendance, attendanceMapping });
+
+      // Create charts after data is loaded
+      setTimeout(() => {
+        if (userRole === 'admin') {
+          createAdminChart(students, institutions);
+          createAdminAttendanceChart(attendance, attendanceMapping);
+          createGradeLevelChart(students);
+          createSystemTrendsChart(grades);
+        } else {
+          createTeacherPerformanceChart(grades);
+          createTeacherAttendanceChart(attendance, attendanceMapping);
+          createQuarterlyComparisonChart(grades);
+        }
+      }, 100);
+
+    } catch (err) {
+      setError('Failed to load dashboard data');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadAllData = async () => {
-      try {
-        setLoading(true);
-        const [students, institutions, grades, attendance, attendanceMapping] = await Promise.all([
-          fetchStudents(),
-          fetchInstitutionList(),
-          fetchGrades(),
-          fetchAttendance(),
-          fetchAttendanceMapping()
-        ]);
-
-        setData({ students, institutions, grades, attendance, attendanceMapping });
-
-        // Create charts after data is loaded
-        setTimeout(() => {
-          if (userRole === 'admin') {
-            createAdminChart(students, institutions);
-            createAdminAttendanceChart(attendance, attendanceMapping);
-            createGradeLevelChart(students);
-            createSystemTrendsChart(grades);
-          } else {
-            createTeacherPerformanceChart(grades);
-            createTeacherAttendanceChart(attendance, attendanceMapping);
-            createQuarterlyComparisonChart(grades);
-          }
-        }, 100);
-
-      } catch (err) {
-        setError('Failed to load dashboard data');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAllData();
+    refetchData();
   }, [userRole]);
+
+  // Auto-refresh data every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (data.students.length > 0) {
@@ -375,16 +386,26 @@ export default function Dashboard() {
     <div className="simple-dashboard">
       <div className="dashboard-header">
         <h1>📊 Analytics Dashboard</h1>
-        <div className="role-toggle">
-          <label>View as:</label>
-          <select 
-            value={userRole} 
-            onChange={(e) => setUserRole(e.target.value)} 
-            className="role-select"
+        <div className="header-controls">
+          <div className="role-toggle">
+            <label>View as:</label>
+            <select 
+              value={userRole} 
+              onChange={(e) => setUserRole(e.target.value)} 
+              className="role-select"
+            >
+              <option value="admin">👨‍💼 Administrator</option>
+              <option value="teacher">👩‍🏫 Teacher</option>
+            </select>
+          </div>
+          <button 
+            onClick={refetchData}
+            disabled={loading}
+            className="refresh-button"
+            title="Refresh data from server"
           >
-            <option value="admin">👨‍💼 Administrator</option>
-            <option value="teacher">👩‍🏫 Teacher</option>
-          </select>
+            {loading ? '⏳ Refreshing...' : '🔄 Refresh Data'}
+          </button>
         </div>
       </div>
 
