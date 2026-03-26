@@ -13,7 +13,7 @@ DROP TABLE IF EXISTS users;
 -- 1. USERS TABLE - Authentication & Authorization
 -- ============================================================
 CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(100) UNIQUE NOT NULL,
     email VARCHAR(150),
     password VARCHAR(500) NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE users (
 -- 2. INSTITUTIONS TABLE - Schools & Learning Centers
 -- ============================================================
 CREATE TABLE institutions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     institution VARCHAR(100) UNIQUE NOT NULL,
     principal VARCHAR(255),
     phone VARCHAR(20),
@@ -52,7 +52,7 @@ CREATE TABLE institutions (
 -- 3. STUDENTS TABLE - Student Information
 -- ============================================================
 CREATE TABLE students (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     uuid VARCHAR(36) UNIQUE,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE students (
 -- 4. GRADES TABLE - Student Performance
 -- ============================================================
 CREATE TABLE grades (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     student_id INT NOT NULL,
     fine_motor VARCHAR(50),
     gross_motor VARCHAR(50),
@@ -101,7 +101,7 @@ CREATE TABLE grades (
 -- 5. ATTENDANCE TABLE - Daily Attendance Tracking
 -- ============================================================
 CREATE TABLE attendance (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     student_id INT NOT NULL,
     institution VARCHAR(100),
     date VARCHAR(20),
@@ -120,7 +120,7 @@ CREATE TABLE attendance (
 -- 6. ATTENDANCE STATUS MAPPING
 -- ============================================================
 CREATE TABLE attendance_mapping (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     status_key VARCHAR(50) UNIQUE,
     status_value VARCHAR(50),
     display_label VARCHAR(50),
