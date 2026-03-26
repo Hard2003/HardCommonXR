@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Plotly from "plotly.js-basic-dist-min";
 import "../SimpleDashboard.css";
 import { 
@@ -12,7 +12,6 @@ import {
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshCount, setRefreshCount] = useState(0);
   const [data, setData] = useState({
     students: [],
     institutions: [],
@@ -23,7 +22,7 @@ export default function Dashboard() {
   const [userRole, setUserRole] = useState('admin');
 
   // Function to refetch all data (can be called after changes)
-  const refetchData = async () => {
+  const refetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [students, institutions, grades, attendance, attendanceMapping] = await Promise.all([
@@ -56,11 +55,11 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userRole]);
 
   useEffect(() => {
     refetchData();
-  }, [userRole]);
+  }, [userRole, refetchData]);
 
   // Auto-refresh data every 30 seconds
   useEffect(() => {
@@ -69,7 +68,7 @@ export default function Dashboard() {
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [refetchData]);
 
   useEffect(() => {
     if (data.students.length > 0) {
