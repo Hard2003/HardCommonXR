@@ -112,11 +112,11 @@ class SimpleServer(BaseHTTPRequestHandler):
                     last_name,
                     primary_guardian_email,
                     gender,
-                    DATE_FORMAT(dob, '%c/%e/%Y') AS dob,
-                    institution_code AS institution,
+                    dob,
+                    institution,
                     grade
                 FROM students
-                WHERE institution_code = %s
+                WHERE institution = %s
                 ORDER BY id
                 """,
                 (institution_name,),
@@ -136,8 +136,8 @@ class SimpleServer(BaseHTTPRequestHandler):
                         last_name,
                         primary_guardian_email,
                         gender,
-                        DATE_FORMAT(dob, '%c/%e/%Y') AS dob,
-                        institution_code AS institution,
+                        dob,
+                        institution,
                         grade
                     FROM students
                     ORDER BY id
@@ -150,15 +150,16 @@ class SimpleServer(BaseHTTPRequestHandler):
                 institutions = fetch_all(
                     """
                     SELECT
+                        id,
+                        institution,
                         principal,
                         phone,
-                        school,
+                        email,
                         district,
                         address,
-                        city,
-                        institution_code AS institution
+                        city
                     FROM institutions
-                    ORDER BY institution_code
+                    ORDER BY institution
                     """
                 )
                 self._set_headers()
@@ -189,10 +190,10 @@ class SimpleServer(BaseHTTPRequestHandler):
                     """
                     SELECT
                         student_id AS id,
-                        DATE_FORMAT(attendance_date, '%Y-%m-%d') AS date,
-                        status_code AS status
-                    FROM student_attendance
-                    ORDER BY attendance_date, student_id
+                        date,
+                        status
+                    FROM attendance
+                    ORDER BY date, student_id
                     """
                 )
                 self._set_headers()
@@ -202,10 +203,12 @@ class SimpleServer(BaseHTTPRequestHandler):
                 mapping = fetch_all(
                     """
                     SELECT
-                        enum_code AS enum,
-                        label
-                    FROM attendance_status_mapping
-                    ORDER BY enum_code
+                        status_key,
+                        status_value,
+                        display_label,
+                        color_code
+                    FROM attendance_mapping
+                    ORDER BY status_key
                     """
                 )
                 self._set_headers()
@@ -330,9 +333,9 @@ class SimpleServer(BaseHTTPRequestHandler):
                     
                     execute_query(
                         """
-                        INSERT INTO student_attendance (student_id, attendance_date, status_code)
+                        INSERT INTO attendance (student_id, date, status)
                         VALUES (%s, %s, %s)
-                        ON DUPLICATE KEY UPDATE status_code = %s
+                        ON DUPLICATE KEY UPDATE status = %s
                         """,
                         (student_id, attendance_date, status_code, status_code)
                     )
