@@ -9,6 +9,9 @@ import InstitutionStudentRoster from "./pages/InstitutionStudentRoster";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
+import InstitutionDetailPage from "./pages/InstitutionDetailPage";
+import GradeDetailPage from "./pages/GradeDetailPage";
+import StudentProfilePage from "./pages/StudentProfilePage";
 import AttendanceInput from "./pages/AttendanceInput";
 import GradesInput from "./pages/GradesInput";
 import GradesView from "./pages/GradesView";
@@ -66,6 +69,18 @@ export default function App() {
             <Route 
               path="/dashboard" 
               element={<PrivateRoute><DashboardRouter /></PrivateRoute>} 
+            />
+            <Route 
+              path="/institution/:institutionId/detail" 
+              element={<PrivateRoute><InstitutionDetailPage /></PrivateRoute>} 
+            />
+            <Route 
+              path="/institution/:institutionId/grade/:grade" 
+              element={<PrivateRoute><GradeDetailPage /></PrivateRoute>} 
+            />
+            <Route 
+              path="/student/:studentId/profile" 
+              element={<PrivateRoute><StudentProfilePage /></PrivateRoute>} 
             />
             <Route 
               path="/attendance" 

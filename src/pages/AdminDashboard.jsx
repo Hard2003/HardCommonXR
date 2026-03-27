@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import Plotly from "plotly.js-basic-dist-min";
 import { fetchAdminDashboardStats } from "../apiCalls";
 import "../SimpleDashboard.css";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -212,7 +214,12 @@ export default function AdminDashboard() {
                     </span>
                   </td>
                   <td>
-                    <button className="view-btn">View Details</button>
+                    <button 
+                      className="view-btn"
+                      onClick={() => navigate(`/institution/${inst.id}/detail`)}
+                    >
+                      View Details
+                    </button>
                   </td>
                 </tr>
               ))}

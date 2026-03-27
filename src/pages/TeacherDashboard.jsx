@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import Plotly from "plotly.js-basic-dist-min";
 import {
   fetchStudents,
@@ -8,6 +9,7 @@ import {
 import "../SimpleDashboard.css";
 
 export default function TeacherDashboard() {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [grades, setGrades] = useState([]);
   const [attendance, setAttendance] = useState([]);
@@ -286,7 +288,12 @@ export default function TeacherDashboard() {
                 <div className="student-card-stat">
                   Attendance: {getAttendancePercent(student.id)}%
                 </div>
-                <button className="view-btn">View Details</button>
+                <button 
+                  className="view-btn"
+                  onClick={() => navigate(`/student/${student.id}/profile`)}
+                >
+                  View Details
+                </button>
               </div>
             ))}
           {students.filter((s) => getPerformanceScore(s.id) <= 2).length ===
