@@ -212,9 +212,225 @@ class SimpleServer(BaseHTTPRequestHandler):
                 self._set_headers()
                 self.wfile.write(json.dumps(mapping).encode("utf-8"))
 
+            case "/api/admin/dashboard-stats":
+                # Admin dashboard overall statistics
+                try:
+                    # Get total counts
+                    total_students = fetch_all("SELECT COUNT(*) as count FROM students")[0]['count']
+                    total_institutions = fetch_all("SELECT COUNT(*) as count FROM institutions")[0]['count']
+                    
+                    # Get current quarter/year (assume current data)
+                    latest_quarter = fetch_all(
+                        "SELECT MAX(grading_quarter) as quarter, MAX(school_year) as year FROM grades"
+                    )[0]
+                    current_quarter = latest_quarter['quarter'] or 1
+                    current_year = latest_quarter['year'] or 2024
+                    
+                    # Calculate average attendance (last 30 days)
+                    cutoff_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+                    attendance_data = fetch_all(
+                        f"""
+                        SELECT 
+                            SUM(CASE WHEN status_code = 1 THEN 1 ELSE 0 END) as present,
+                            COUNT(*) as total
+                        FROM student_attendance
+                        WHERE attendence_date >= '{cutoff_date}'
+                        """
+                    )[0]
+                    
+                    avg_attendance = round((attendance_data['present'] / max(attendance_data['total'], 1)) * 100, 1)
+                    
+                    # Get competency distribution (current quarter)
+                    competencies = ['fine_motor', 'gross_motor', 'social_emotional', 'early_literacy', 'early_numeracy', 'independence']
+                    competency_dist = {}
+                    
+                    for comp in competencies:
+                        comp_data = fetch_all(
+                            f"""
+                            SELECT 
+                                SUM(CASE WHEN {comp} = 'Emerging' THEN 1 ELSE 0 END) as emerging,
+                                SUM(CASE WHEN {comp} = 'Developing' THEN 1 ELSE 0 END) as developing,
+                                SUM(CASE WHEN {comp} = 'Proficient' THEN 1 ELSE 0 END) as proficient,
+                                COUNT(*) as total
+                            FROM grades
+                            WHERE school_year = %s AND grading_quarter = %s
+                            """,
+                            (current_year, current_quarter)
+                        )[0]
+                        
+                        competency_dist[comp] = {
+                            'emerging': comp_data['emerging'] or 0,
+                            'developing': comp_data['developing'] or 0,
+                            'proficient': comp_data['proficient'] or 0,
+                            'total': comp_data['total'] or 0
+                        }
+                    
+                    # Get institution stats
+                    institution_stats = fetch_all(
+                        """
+                        SELECT 
+                            i.id,
+                            i.institution_code,
+                            i.school,
+                            COUNT(DISTINCT s.id) as student_count
+                        FROM institutions i
+                        LEFT JOIN students s ON i.institution_code = s.institution_code
+                        GROUP BY i.id, i.institution_code, i.school
+                        ORDER BY i.institution_code
+                        """
+                    )
+                    
+                    # Add attendance % for each institution
+                    for inst in institution_stats:
+                        inst_attendance = fetch_all(
+                            f"""
+                            SELECT 
+                                SUM(CASE WHEN sa.status_code = 1 THEN 1 ELSE 0 END) as present,
+                                COUNT(*) as total
+                            FROM student_attendance sa
+                            JOIN students s ON sa.student_id = s.id
+                            WHERE s.institution_code = %s AND sa.attendence_date >= '{cutoff_date}'
+                            """,
+                            (inst['institution_code'],)
+                        )[0]
+                        inst['attendance_percent'] = round((inst_attendance['present'] / max(inst_attendance['total'], 1)) * 100, 1) if inst_attendance['total'] > 0 else 0
+                    
+                    stats = {
+                        'totalStudents': total_students,
+                        'totalInstitutions': total_institutions,
+                        'avgAttendance': avg_attendance,
+                        'currentQuarter': current_quarter,
+                        'currentYear': current_year,
+                        'competencyDistribution': competency_dist,
+                        'institutionStats': institution_stats
+                    }
+                    
+                    self._set_headers()
+                    self.wfile.write(json.dumps(stats).encode("utf-8"))
+                except Exception as e:
+                    self._set_headers(500)
+                    self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
             case _:
-                self._set_headers(404)
-                self.wfile.write(json.dumps({"error": "Not Found"}).encode("utf-8"))
+                # Check if path matches /api/institutions/{id}/detail
+                if "/api/institutions/" in path and "/detail" in path:
+                    try:
+                        institution_id = path.split("/api/institutions/")[1].split("/detail")[0]
+                        
+                        # Get institution info
+                        inst_info = fetch_all(
+                            "SELECT * FROM institutions WHERE id = %s",
+                            (institution_id,)
+                        )
+                        
+                        if not inst_info:
+                            self._set_headers(404)
+                            self.wfile.write(json.dumps({"error": "Institution not found"}).encode("utf-8"))
+                            return
+                        
+                        inst = inst_info[0]
+                        
+                        # Get students in this institution
+                        students = fetch_all(
+                            "SELECT id, first_name, last_name, grade FROM students WHERE institution_code = %s ORDER BY grade, last_name",
+                            (inst['institution_code'],)
+                        )
+                        
+                        # Get attendance for this institution
+                        cutoff_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+                        attendance_stats = fetch_all(
+                            f"""
+                            SELECT 
+                                SUM(CASE WHEN sa.status_code = 1 THEN 1 ELSE 0 END) as present,
+                                COUNT(*) as total
+                            FROM student_attendance sa
+                            JOIN students s ON sa.student_id = s.id
+                            WHERE s.institution_code = %s AND sa.attendence_date >= '{cutoff_date}'
+                            """,
+                            (inst['institution_code'],)
+                        )[0]
+                        
+                        inst_attendance = round((attendance_stats['present'] / max(attendance_stats['total'], 1)) * 100, 1) if attendance_stats['total'] > 0 else 0
+                        
+                        detail = {
+                            'institution': inst,
+                            'studentCount': len(students),
+                            'attendancePercent': inst_attendance,
+                            'students': students
+                        }
+                        
+                        self._set_headers()
+                        self.wfile.write(json.dumps(detail).encode("utf-8"))
+                    except Exception as e:
+                        self._set_headers(500)
+                        self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                
+                # Check if path matches /api/students/{id}/history
+                elif "/api/students/" in path and "/history" in path:
+                    try:
+                        student_id = path.split("/api/students/")[1].split("/history")[0]
+                        
+                        # Get student info
+                        student_info = fetch_all(
+                            "SELECT * FROM students WHERE id = %s",
+                            (student_id,)
+                        )
+                        
+                        if not student_info:
+                            self._set_headers(404)
+                            self.wfile.write(json.dumps({"error": "Student not found"}).encode("utf-8"))
+                            return
+                        
+                        student = student_info[0]
+                        
+                        # Get attendance history
+                        attendance = fetch_all(
+                            """
+                            SELECT attendence_date as date, status_code as status
+                            FROM student_attendance
+                            WHERE student_id = %s
+                            ORDER BY attendence_date DESC
+                            """,
+                            (student_id,)
+                        )
+                        
+                        # Get grades history
+                        grades = fetch_all(
+                            """
+                            SELECT 
+                                school_year, grading_quarter,
+                                fine_motor, gross_motor, social_emotional,
+                                early_literacy, early_numeracy, independence
+                            FROM grades
+                            WHERE student_id = %s
+                            ORDER BY school_year DESC, grading_quarter DESC
+                            """,
+                            (student_id,)
+                        )
+                        
+                        # Calculate attendance percentage
+                        if attendance:
+                            present_count = sum(1 for att in attendance if att['status'] == 1)
+                            attendance_percent = round((present_count / len(attendance)) * 100, 1)
+                        else:
+                            attendance_percent = 0
+                        
+                        history = {
+                            'student': student,
+                            'attendancePercent': attendance_percent,
+                            'attendanceHistory': attendance,
+                            'gradesHistory': grades
+                        }
+                        
+                        self._set_headers()
+                        self.wfile.write(json.dumps(history).encode("utf-8"))
+                    except Exception as e:
+                        self._set_headers(500)
+                        self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                
+                else:
+                    self._set_headers(404)
+                    self.wfile.write(json.dumps({"error": "Not Found"}).encode("utf-8"))
 
     def do_POST(self):
         path = self.path

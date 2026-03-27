@@ -192,3 +192,49 @@ export const recordGrades = async (studentId, schoolYear, quarter, grades) => {
     throw error;
   }
 };
+
+// Aggregated data endpoints for dashboards
+export const fetchAdminDashboardStats = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/api/admin/dashboard-stats`, {
+      headers: getHeaders()
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch admin dashboard stats');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching admin dashboard stats:', error);
+    throw error;
+  }
+};
+
+export const fetchInstitutionDetail = async (institutionId) => {
+  try {
+    const response = await fetch(`${API_BASE}/api/institutions/${institutionId}/detail`, {
+      headers: getHeaders()
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch institution detail');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching institution detail:', error);
+    throw error;
+  }
+};
+
+export const fetchStudentHistory = async (studentId) => {
+  try {
+    const response = await fetch(`${API_BASE}/api/students/${studentId}/history`, {
+      headers: getHeaders()
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch student history');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching student history:', error);
+    throw error;
+  }
+};
