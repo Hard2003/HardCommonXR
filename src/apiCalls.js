@@ -1,5 +1,12 @@
-// API URL - switches between local development and Railway production
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3080';
+// API URL resolution:
+// 1) explicit env var wins
+// 2) local dev uses localhost backend
+// 3) deployed app uses same-origin /api
+const API_BASE =
+  process.env.REACT_APP_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3080'
+    : '');
 
 // Token management
 export const getToken = () => localStorage.getItem('authToken');
