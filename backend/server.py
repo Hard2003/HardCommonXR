@@ -93,7 +93,6 @@ class SimpleServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path
-        print(path)
 
         # Extract token from Authorization header
         auth_header = self.headers.get('Authorization', '')
