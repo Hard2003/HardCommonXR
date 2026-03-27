@@ -9,8 +9,8 @@ import mysql.connector
 import jwt
 from password_utils import hash_password, verify_password
 
-SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
-SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
+SERVER_PORT = int(os.getenv("PORT", os.getenv("SERVER_PORT", "3080")))
+SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
 JWT_SECRET = os.getenv("JWT_SECRET", "your_secret_key_change_in_production")
 
 DB_CONFIG = {
