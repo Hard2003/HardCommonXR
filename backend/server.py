@@ -9,16 +9,17 @@ import mysql.connector
 import jwt
 from password_utils import hash_password, verify_password
 
-SERVER_PORT = int(os.getenv("SERVER_PORT", "3081"))
+SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
 SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
 JWT_SECRET = os.getenv("JWT_SECRET", "your_secret_key_change_in_production")
 
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
-    "port": int(os.getenv("DB_PORT", "3307")),
-    "user": os.getenv("DB_USER", "admin"),
-    "password": os.getenv("DB_PASSWORD", "admin123"),
-    "database": os.getenv("DB_NAME", "tcxr_cares"),
+    "host": os.getenv("DB_HOST", "crossover.proxy.rlwy.net"),
+    "port": int(os.getenv("DB_PORT", "45313")),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", "ZpoYKIqgmCSAXVHuyuEDNshvrVlagCAV"),
+    "database": os.getenv("DB_NAME", "railway"),
+    "connection_timeout": int(os.getenv("DB_TIMEOUT", "8")),
 }
 
 
