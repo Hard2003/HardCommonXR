@@ -9,7 +9,7 @@ import mysql.connector
 import jwt
 from password_utils import hash_password, verify_password
 
-SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
+SERVER_PORT = int(os.getenv("SERVER_PORT", "3081"))
 SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
 JWT_SECRET = os.getenv("JWT_SECRET", "your_secret_key_change_in_production")
 
@@ -79,8 +79,10 @@ class SimpleServer(BaseHTTPRequestHandler):
         self._set_headers()
 
     def do_GET(self):
-        path = self.path
-        print(path)
+        raw_path = self.path
+        parsed_path = urlparse(raw_path).path
+        path = parsed_path.rstrip("/") or "/"
+        print(raw_path)
 
         # Extract token from Authorization header
         auth_header = self.headers.get('Authorization', '')
@@ -94,7 +96,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                 return
 
         if path.startswith("/api/institution/studentRoster"):
-            parsed_url = urlparse(path)
+            parsed_url = urlparse(raw_path)
             params = parse_qs(parsed_url.query)
 
             institution_name = params.get("institution", [None])[0]
@@ -433,7 +435,9 @@ class SimpleServer(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"error": "Not Found"}).encode("utf-8"))
 
     def do_POST(self):
-        path = self.path
+        raw_path = self.path
+        parsed_path = urlparse(raw_path).path
+        path = parsed_path.rstrip("/") or "/"
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length).decode("utf-8")
 
