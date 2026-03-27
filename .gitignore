@@ -25,3 +25,11 @@ yarn-error.log*
 /perspective
 
 *.local.*
+
+# local diagnostics / generated logs
+build_output.txt
+sync_output.txt
+
+# python cache
+__pycache__/
+backend/__pycache__/

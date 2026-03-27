@@ -19,7 +19,6 @@ DB_CONFIG = {
     "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", "ZpoYKIqgmCSAXVHuyuEDNshvrVlagCAV"),
     "database": os.getenv("DB_NAME", "railway"),
-    "connection_timeout": int(os.getenv("DB_TIMEOUT", "8")),
 }
 
 
@@ -76,6 +75,10 @@ class SimpleServer(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "*")
         self.end_headers()
 
+    def _write_json(self, payload, status=200):
+        self._set_headers(status)
+        self.wfile.write(json.dumps(payload, default=str).encode("utf-8"))
+
     def do_OPTIONS(self):
         self._set_headers()
 
@@ -122,8 +125,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                 """,
                 (institution_name,),
             )
-            self._set_headers()
-            self.wfile.write(json.dumps(roster).encode("utf-8"))
+            self._write_json(roster)
             return
 
         match path:
@@ -144,8 +146,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     ORDER BY id
                     """
                 )
-                self._set_headers()
-                self.wfile.write(json.dumps(students).encode("utf-8"))
+                self._write_json(students)
 
             case "/api/institutions":
                 institutions = fetch_all(
@@ -197,8 +198,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     ORDER BY attendence_date, student_id
                     """
                 )
-                self._set_headers()
-                self.wfile.write(json.dumps(attendance).encode("utf-8"))
+                self._write_json(attendance)
 
             case "/api/attendance-mapping":
                 mapping = fetch_all(
@@ -360,8 +360,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                             'students': students
                         }
                         
-                        self._set_headers()
-                        self.wfile.write(json.dumps(detail).encode("utf-8"))
+                        self._write_json(detail)
                     except Exception as e:
                         self._set_headers(500)
                         self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
@@ -423,8 +422,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                             'gradesHistory': grades
                         }
                         
-                        self._set_headers()
-                        self.wfile.write(json.dumps(history).encode("utf-8"))
+                        self._write_json(history)
                     except Exception as e:
                         self._set_headers(500)
                         self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
@@ -435,16 +433,13 @@ class SimpleServer(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path
-        print(f"DEBUG: POST request to {path}", flush=True)
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length).decode("utf-8")
-        print(f"DEBUG: Body: {body[:100]}", flush=True)
 
         # Extract token from Authorization header
         auth_header = self.headers.get('Authorization', '')
         token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else None
 
-        print(f"DEBUG: Matching against path: '{path}'", flush=True)
         match path:
             case "/api/auth/login":
                 try:
