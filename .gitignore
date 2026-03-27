@@ -26,10 +26,33 @@ yarn-error.log*
 
 *.local.*
 
-# local diagnostics / generated logs
-build_output.txt
-sync_output.txt
-
-# python cache
+# Python
 __pycache__/
-backend/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+
+# Database
+.env
+.env.local
+.env.*.local
+database/data/
+*.sql.backup
+
+# Docker
+.dockerignore
