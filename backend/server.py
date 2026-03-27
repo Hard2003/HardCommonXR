@@ -434,13 +434,16 @@ class SimpleServer(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path
+        print(f"DEBUG: POST request to {path}", flush=True)
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length).decode("utf-8")
+        print(f"DEBUG: Body: {body[:100]}", flush=True)
 
         # Extract token from Authorization header
         auth_header = self.headers.get('Authorization', '')
         token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else None
 
+        print(f"DEBUG: Matching against path: '{path}'", flush=True)
         match path:
             case "/api/auth/login":
                 try:
