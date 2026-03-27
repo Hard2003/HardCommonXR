@@ -1,5 +1,5 @@
 // API URL - switches between local development and Railway production
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3080';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3081';
 
 // Token management
 export const getToken = () => localStorage.getItem('authToken');

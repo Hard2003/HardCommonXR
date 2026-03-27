@@ -67,7 +67,7 @@ const LoginPage = ({ setIsAuthenticated }) => {
     setLoading(true);
 
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3080';
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3081';
       
       const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
         method: 'POST',
