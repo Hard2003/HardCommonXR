@@ -203,10 +203,10 @@ class SimpleServer(BaseHTTPRequestHandler):
                     """
                     SELECT
                         student_id AS id,
-                        attendence_date AS date,
+                        attendance_date AS date,
                         status_code AS status
                     FROM student_attendance
-                    ORDER BY attendence_date, student_id
+                    ORDER BY attendance_date, student_id
                     """
                 )
                 self._set_headers()
@@ -247,7 +247,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                             SUM(CASE WHEN status_code = 1 THEN 1 ELSE 0 END) as present,
                             COUNT(*) as total
                         FROM student_attendance
-                        WHERE attendence_date >= '{cutoff_date}'
+                        WHERE attendance_date >= '{cutoff_date}'
                         """
                     )[0]
                     
@@ -302,7 +302,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                                 COUNT(*) as total
                             FROM student_attendance sa
                             JOIN students s ON sa.student_id = s.id
-                            WHERE s.institution_code = %s AND sa.attendence_date >= '{cutoff_date}'
+                            WHERE s.institution_code = %s AND sa.attendance_date >= '{cutoff_date}'
                             """,
                             (inst['institution_code'],)
                         )[0]
@@ -358,7 +358,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                                 COUNT(*) as total
                             FROM student_attendance sa
                             JOIN students s ON sa.student_id = s.id
-                            WHERE s.institution_code = %s AND sa.attendence_date >= '{cutoff_date}'
+                            WHERE s.institution_code = %s AND sa.attendance_date >= '{cutoff_date}'
                             """,
                             (inst['institution_code'],)
                         )[0]
@@ -399,10 +399,10 @@ class SimpleServer(BaseHTTPRequestHandler):
                         # Get attendance history
                         attendance = fetch_all(
                             """
-                            SELECT attendence_date as date, status_code as status
+                            SELECT attendance_date as date, status_code as status
                             FROM student_attendance
                             WHERE student_id = %s
-                            ORDER BY attendence_date DESC
+                            ORDER BY attendance_date DESC
                             """,
                             (student_id,)
                         )
@@ -560,7 +560,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     
                     execute_query(
                         """
-                        INSERT INTO student_attendance (student_id, attendence_date, status_code)
+                        INSERT INTO student_attendance (student_id, attendance_date, status_code)
                         VALUES (%s, %s, %s)
                         ON DUPLICATE KEY UPDATE status_code = %s
                         """,
