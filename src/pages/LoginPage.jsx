@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../apiCalls';
+import { login, setToken, setRole } from '../apiCalls';
 import '../pages/LoginPage.css';
 
 const LoginPage = ({ setIsAuthenticated }) => {
@@ -87,9 +87,9 @@ const LoginPage = ({ setIsAuthenticated }) => {
         throw new Error(data.error || 'Signup failed');
       }
 
-      // Success - store credentials and login
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', data.role);
+      // Success - store credentials and login using correct keys
+      setToken(data.token);
+      setRole(data.role);
       localStorage.setItem('username', data.username);
       
       setIsAuthenticated(true);
