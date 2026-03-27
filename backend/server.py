@@ -2,12 +2,25 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import List, Dict, Any, Optional
 
 import mysql.connector
 import jwt
 from password_utils import hash_password, verify_password
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle date and datetime objects"""
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        return super().default(obj)
+
+
+def to_json(obj):
+    """Helper function to serialize objects to JSON with date support"""
+    return json.dumps(obj, cls=DateTimeEncoder)
 
 SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
 SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
@@ -122,7 +135,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                 (institution_name,),
             )
             self._set_headers()
-            self.wfile.write(json.dumps(roster).encode("utf-8"))
+            self.wfile.write(to_json(roster).encode("utf-8"))
             return
 
         match path:
@@ -144,7 +157,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     """
                 )
                 self._set_headers()
-                self.wfile.write(json.dumps(students).encode("utf-8"))
+                self.wfile.write(to_json(students).encode("utf-8"))
 
             case "/api/institutions":
                 institutions = fetch_all(
@@ -163,7 +176,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     """
                 )
                 self._set_headers()
-                self.wfile.write(json.dumps(institutions).encode("utf-8"))
+                self.wfile.write(to_json(institutions).encode("utf-8"))
 
             case "/api/grades":
                 grades = fetch_all(
@@ -183,7 +196,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     """
                 )
                 self._set_headers()
-                self.wfile.write(json.dumps(grades).encode("utf-8"))
+                self.wfile.write(to_json(grades).encode("utf-8"))
 
             case "/api/attendance":
                 attendance = fetch_all(
@@ -197,7 +210,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     """
                 )
                 self._set_headers()
-                self.wfile.write(json.dumps(attendance).encode("utf-8"))
+                self.wfile.write(to_json(attendance).encode("utf-8"))
 
             case "/api/attendance-mapping":
                 mapping = fetch_all(
@@ -210,7 +223,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     """
                 )
                 self._set_headers()
-                self.wfile.write(json.dumps(mapping).encode("utf-8"))
+                self.wfile.write(to_json(mapping).encode("utf-8"))
 
             case "/api/admin/dashboard-stats":
                 # Admin dashboard overall statistics
@@ -306,7 +319,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                     }
                     
                     self._set_headers()
-                    self.wfile.write(json.dumps(stats).encode("utf-8"))
+                    self.wfile.write(to_json(stats).encode("utf-8"))
                 except Exception as e:
                     self._set_headers(500)
                     self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
@@ -360,7 +373,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                         }
                         
                         self._set_headers()
-                        self.wfile.write(json.dumps(detail).encode("utf-8"))
+                        self.wfile.write(to_json(detail).encode("utf-8"))
                     except Exception as e:
                         self._set_headers(500)
                         self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
@@ -423,7 +436,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                         }
                         
                         self._set_headers()
-                        self.wfile.write(json.dumps(history).encode("utf-8"))
+                        self.wfile.write(to_json(history).encode("utf-8"))
                     except Exception as e:
                         self._set_headers(500)
                         self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
