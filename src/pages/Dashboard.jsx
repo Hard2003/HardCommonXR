@@ -104,12 +104,12 @@ export default function Dashboard() {
   // Admin Chart: Institution Overview
   const createAdminChart = (students, institutions) => {
     const institutionData = institutions.map(inst => {
-      const studentCount = students.filter(s => s.institution === inst.institution).length;
+      const studentCount = students.filter(s => s.institution_code === inst.institution_code).length;
       return {
-        institution: inst.institution.toUpperCase(),
+        institution: (inst.school || inst.institution_code || 'Unknown').toUpperCase(),
         students: studentCount,
-        principal: inst.principal,
-        district: inst.district
+        principal: inst.principal || 'N/A',
+        district: inst.district || 'N/A'
       };
     });
 
@@ -139,7 +139,10 @@ export default function Dashboard() {
     const monthlyStats = {};
     
     attendance.forEach(record => {
+      if (!record.date) return; // Skip records without dates
       const date = new Date(record.date);
+      if (isNaN(date)) return; // Skip invalid dates
+      
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       
       if (!monthlyStats[monthKey]) {
@@ -147,7 +150,7 @@ export default function Dashboard() {
       }
       
       monthlyStats[monthKey].total++;
-      if (record.status === 1) { // Present
+      if (record.status === 1 || record.status === '1') { // Present
         monthlyStats[monthKey].present++;
       }
     });
@@ -214,11 +217,12 @@ export default function Dashboard() {
     const dailyAttendance = {};
     
     attendance.forEach(record => {
+      if (!record.date) return; // Skip records without dates
       if (!dailyAttendance[record.date]) {
         dailyAttendance[record.date] = { total: 0, present: 0 };
       }
       dailyAttendance[record.date].total++;
-      if (record.status === 1) { // Present
+      if (record.status === 1 || record.status === '1') { // Present
         dailyAttendance[record.date].present++;
       }
     });
@@ -276,10 +280,12 @@ export default function Dashboard() {
 
   // Admin System Performance Trends Chart
   const createSystemTrendsChart = (grades) => {
+    if (!grades.length) return; // Early return if no grades
+    
     const quarterData = {};
     
     grades.forEach(grade => {
-      const quarter = grade.grading_quarter;
+      const quarter = grade.grading_quarter || 'Q1';
       if (!quarterData[quarter]) {
         quarterData[quarter] = { total: 0, proficient: 0 };
       }
