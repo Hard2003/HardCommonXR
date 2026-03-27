@@ -9,16 +9,16 @@ import mysql.connector
 import jwt
 from password_utils import hash_password, verify_password
 
-SERVER_PORT = int(os.getenv("PORT", os.getenv("SERVER_PORT", "3080")))
-SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
+SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
+SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
 JWT_SECRET = os.getenv("JWT_SECRET", "your_secret_key_change_in_production")
 
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "crossover.proxy.rlwy.net"),
-    "port": int(os.getenv("DB_PORT", "45313")),
-    "user": os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD", "ZpoYKIqgmCSAXVHuyuEDNshvrVlagCAV"),
-    "database": os.getenv("DB_NAME", "railway"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "3307")),
+    "user": os.getenv("DB_USER", "admin"),
+    "password": os.getenv("DB_PASSWORD", "admin123"),
+    "database": os.getenv("DB_NAME", "tcxr_cares"),
 }
 
 
@@ -75,10 +75,6 @@ class SimpleServer(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "*")
         self.end_headers()
 
-    def _write_json(self, payload, status=200):
-        self._set_headers(status)
-        self.wfile.write(json.dumps(payload, default=str).encode("utf-8"))
-
     def do_OPTIONS(self):
         self._set_headers()
 
@@ -125,7 +121,8 @@ class SimpleServer(BaseHTTPRequestHandler):
                 """,
                 (institution_name,),
             )
-            self._write_json(roster)
+            self._set_headers()
+            self.wfile.write(json.dumps(roster).encode("utf-8"))
             return
 
         match path:
@@ -146,7 +143,8 @@ class SimpleServer(BaseHTTPRequestHandler):
                     ORDER BY id
                     """
                 )
-                self._write_json(students)
+                self._set_headers()
+                self.wfile.write(json.dumps(students).encode("utf-8"))
 
             case "/api/institutions":
                 institutions = fetch_all(
@@ -198,7 +196,8 @@ class SimpleServer(BaseHTTPRequestHandler):
                     ORDER BY attendence_date, student_id
                     """
                 )
-                self._write_json(attendance)
+                self._set_headers()
+                self.wfile.write(json.dumps(attendance).encode("utf-8"))
 
             case "/api/attendance-mapping":
                 mapping = fetch_all(
@@ -360,7 +359,8 @@ class SimpleServer(BaseHTTPRequestHandler):
                             'students': students
                         }
                         
-                        self._write_json(detail)
+                        self._set_headers()
+                        self.wfile.write(json.dumps(detail).encode("utf-8"))
                     except Exception as e:
                         self._set_headers(500)
                         self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
@@ -422,7 +422,8 @@ class SimpleServer(BaseHTTPRequestHandler):
                             'gradesHistory': grades
                         }
                         
-                        self._write_json(history)
+                        self._set_headers()
+                        self.wfile.write(json.dumps(history).encode("utf-8"))
                     except Exception as e:
                         self._set_headers(500)
                         self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))

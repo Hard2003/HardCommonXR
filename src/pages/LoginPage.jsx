@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, setToken, setRole } from '../apiCalls';
+import { login } from '../apiCalls';
 import '../pages/LoginPage.css';
 
 const LoginPage = ({ setIsAuthenticated }) => {
@@ -67,9 +67,7 @@ const LoginPage = ({ setIsAuthenticated }) => {
     setLoading(true);
 
     try {
-      const API_BASE_URL =
-        process.env.REACT_APP_API_URL ||
-        (window.location.hostname === 'localhost' ? 'http://localhost:3080' : '');
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3080';
       
       const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
         method: 'POST',
@@ -89,9 +87,9 @@ const LoginPage = ({ setIsAuthenticated }) => {
         throw new Error(data.error || 'Signup failed');
       }
 
-      // Success - store credentials and login using correct keys
-      setToken(data.token);
-      setRole(data.role);
+      // Success - store credentials and login
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
       localStorage.setItem('username', data.username);
       
       setIsAuthenticated(true);

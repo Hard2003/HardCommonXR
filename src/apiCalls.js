@@ -1,12 +1,5 @@
-// API URL resolution for Railway + Local development:
-// 1) explicit env var wins (set REACT_APP_API_URL in Railway dashboard)
-// 2) local dev with localhost hostname uses localhost:3080
-// 3) fallback: uses same-origin (works if frontend & backend on same domain)
-const API_BASE =
-  process.env.REACT_APP_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:3080'
-    : ''); // Railway: Set REACT_APP_API_URL=https://your-backend-url.railway.app
+// API URL - switches between local development and Railway production
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3080';
 
 // Token management
 export const getToken = () => localStorage.getItem('authToken');
