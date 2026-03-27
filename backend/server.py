@@ -158,6 +158,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                 )
                 self._set_headers()
                 self.wfile.write(to_json(students).encode("utf-8"))
+                return
 
             case "/api/institutions":
                 institutions = fetch_all(
@@ -177,6 +178,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                 )
                 self._set_headers()
                 self.wfile.write(to_json(institutions).encode("utf-8"))
+                return
 
             case "/api/grades":
                 grades = fetch_all(
@@ -197,6 +199,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                 )
                 self._set_headers()
                 self.wfile.write(to_json(grades).encode("utf-8"))
+                return
 
             case "/api/attendance":
                 attendance = fetch_all(
@@ -211,6 +214,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                 )
                 self._set_headers()
                 self.wfile.write(to_json(attendance).encode("utf-8"))
+                return
 
             case "/api/attendance-mapping":
                 mapping = fetch_all(
@@ -224,6 +228,7 @@ class SimpleServer(BaseHTTPRequestHandler):
                 )
                 self._set_headers()
                 self.wfile.write(to_json(mapping).encode("utf-8"))
+                return
 
             case "/api/admin/dashboard-stats":
                 # Admin dashboard overall statistics
@@ -320,9 +325,11 @@ class SimpleServer(BaseHTTPRequestHandler):
                     
                     self._set_headers()
                     self.wfile.write(to_json(stats).encode("utf-8"))
+                    return
                 except Exception as e:
                     self._set_headers(500)
                     self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                    return
 
             case _:
                 # Check if path matches /api/institutions/{id}/detail
