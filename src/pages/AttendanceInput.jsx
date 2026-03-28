@@ -27,7 +27,7 @@ const AttendanceInput = () => {
         setAttendanceMapping(mappingData);
         
         // Extract unique institutions
-        const uniqueInstitutions = [...new Set(studentsData.map(s => s.institution))].sort();
+        const uniqueInstitutions = [...new Set(studentsData.map(s => s.institution_code || s.institution || 'Unknown'))].sort();
         setInstitutions(uniqueInstitutions);
         
         // Initialize attendance object
@@ -150,7 +150,7 @@ const AttendanceInput = () => {
             <div className="stat-label">Total Students</div>
             <div className="stat-value">{
               filterInstitution 
-                ? students.filter(s => s.institution === filterInstitution).length
+                ? students.filter(s => (s.institution_code || s.institution) === filterInstitution).length
                 : students.length
             }</div>
           </div>
@@ -158,7 +158,7 @@ const AttendanceInput = () => {
             <div className="stat-label">Marked</div>
             <div className="stat-value marked">{
               filterInstitution
-                ? students.filter(s => s.institution === filterInstitution).filter(s => attendance[s.id]).length
+                ? students.filter(s => (s.institution_code || s.institution) === filterInstitution).filter(s => attendance[s.id]).length
                 : Object.values(attendance).filter(s => s).length
             }</div>
           </div>
@@ -166,7 +166,7 @@ const AttendanceInput = () => {
             <div className="stat-label">Pending</div>
             <div className="stat-value pending">{
               filterInstitution
-                ? students.filter(s => s.institution === filterInstitution).filter(s => !attendance[s.id]).length
+                ? students.filter(s => (s.institution_code || s.institution) === filterInstitution).filter(s => !attendance[s.id]).length
                 : Object.values(attendance).filter(s => !s).length
             }</div>
           </div>
@@ -187,7 +187,7 @@ const AttendanceInput = () => {
             <tbody>
               {students
                 .filter(student => 
-                  (!filterInstitution || student.institution === filterInstitution) &&
+                  (!filterInstitution || (student.institution_code || student.institution) === filterInstitution) &&
                   (!searchTerm ||
                   student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                   student.last_name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -195,7 +195,7 @@ const AttendanceInput = () => {
                 .map(student => (
                 <tr key={student.id}>
                   <td className="student-name">{student.first_name} {student.last_name}</td>
-                  <td className="institution">{student.institution}</td>
+                  <td className="institution">{student.institution_code || student.institution}</td>
                   <td className="grade">{student.grade}</td>
                   <td className="status-selector">
                     <select
@@ -204,7 +204,7 @@ const AttendanceInput = () => {
                     >
                       <option value="">—</option>
                       {attendanceMapping.map(mapping => (
-                        <option key={mapping.enum} value={mapping.enum}>
+                        <option key={mapping.enum_code} value={mapping.enum_code}>
                           {mapping.label}
                         </option>
                       ))}

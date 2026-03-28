@@ -104,9 +104,10 @@ export default function Dashboard() {
   // Admin Chart: Institution Overview
   const createAdminChart = (students, institutions) => {
     const institutionData = institutions.map(inst => {
-      const studentCount = students.filter(s => s.institution === inst.institution).length;
+      const studentCount = students.filter(s => s.institution_code === inst.institution_code).length;
+      const institutionName = inst.school || inst.institution || inst.institution_code || 'Unknown';
       return {
-        institution: inst.institution.toUpperCase(),
+        institution: institutionName.toUpperCase(),
         students: studentCount,
         principal: inst.principal,
         district: inst.district
@@ -139,7 +140,9 @@ export default function Dashboard() {
     const monthlyStats = {};
     
     attendance.forEach(record => {
+      if (!record.date) return;
       const date = new Date(record.date);
+      if (Number.isNaN(date.getTime())) return;
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       
       if (!monthlyStats[monthKey]) {
@@ -147,7 +150,7 @@ export default function Dashboard() {
       }
       
       monthlyStats[monthKey].total++;
-      if (record.status === 1) { // Present
+      if (record.status === 1 || record.status === '1') { // Present
         monthlyStats[monthKey].present++;
       }
     });
@@ -214,11 +217,12 @@ export default function Dashboard() {
     const dailyAttendance = {};
     
     attendance.forEach(record => {
+      if (!record.date) return;
       if (!dailyAttendance[record.date]) {
         dailyAttendance[record.date] = { total: 0, present: 0 };
       }
       dailyAttendance[record.date].total++;
-      if (record.status === 1) { // Present
+      if (record.status === 1 || record.status === '1') { // Present
         dailyAttendance[record.date].present++;
       }
     });
@@ -420,7 +424,7 @@ export default function Dashboard() {
         <div className="summary-card">
           <div className="summary-number">
             {data.attendance.length > 0 ? 
-              ((data.attendance.filter(a => a.status === 1).length / data.attendance.length) * 100).toFixed(1) + '%'
+              ((data.attendance.filter(a => a.status === 1 || a.status === '1').length / data.attendance.length) * 100).toFixed(1) + '%'
               : 'N/A'
             }
           </div>

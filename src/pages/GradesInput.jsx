@@ -153,7 +153,7 @@ const GradesInput = () => {
               <option value="">-- Select a Student --</option>
               {students.map(student => (
                 <option key={student.id} value={student.id}>
-                  {student.first_name} {student.last_name} - {student.institution}
+                  {student.first_name} {student.last_name} - {student.institution_code || student.institution}
                 </option>
               ))}
             </select>
@@ -167,7 +167,7 @@ const GradesInput = () => {
               </div>
               <div className="info-item">
                 <span className="label">Institution:</span>
-                <span className="value">{currentStudent.institution}</span>
+                <span className="value">{currentStudent.institution_code || currentStudent.institution}</span>
               </div>
             </div>
           )}

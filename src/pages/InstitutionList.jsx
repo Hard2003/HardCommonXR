@@ -56,10 +56,10 @@ export default function InstitutionList() {
     // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(inst =>
-        inst.school.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inst.principal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inst.institution.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inst.city.toLowerCase().includes(searchTerm.toLowerCase())
+        (inst.school || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (inst.principal || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (inst.institution_code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (inst.city || "").toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -164,9 +164,9 @@ export default function InstitutionList() {
             </tr>
           </thead>
           <tbody>
-            {filteredInstitutions.map((institution, index) => (
-              <tr key={index}>
-                <td><span className="institution-code">{institution.institution}</span></td>
+            {filteredInstitutions.map((institution) => (
+              <tr key={institution.id || institution.institution_code}>
+                <td><span className="institution-code">{institution.institution_code}</span></td>
                 <td><strong>{institution.school}</strong></td>
                 <td>{institution.principal}</td>
                 <td>{institution.phone}</td>
@@ -175,7 +175,7 @@ export default function InstitutionList() {
                 <td>{institution.district}</td>
                 <td>
                   <Link 
-                    to={`/${institution.institution}/studentlist`}
+                    to={`/${institution.institution_code}/studentlist`}
                     className="view-students-btn"
                   >
                     View Students

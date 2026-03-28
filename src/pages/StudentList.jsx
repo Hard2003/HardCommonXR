@@ -16,6 +16,9 @@ export default function StudentList() {
   const [grades, setGrades] = useState([]);
   const { getCachedStudents, cacheStudents } = useDataCache();
 
+  const getInstitutionName = (student) =>
+    student.institution || student.school || student.institution_code || "Unknown";
+
   useEffect(() => {
     const loadStudents = async () => {
       try {
@@ -47,7 +50,7 @@ export default function StudentList() {
   }, [getCachedStudents, cacheStudents]);
 
   const extractFilters = (data) => {
-    const uniqueInstitutions = [...new Set(data.map(s => s.institution))].sort();
+    const uniqueInstitutions = [...new Set(data.map((s) => getInstitutionName(s)))].sort();
     const uniqueGrades = [...new Set(data.map(s => s.grade))].sort();
     setInstitutions(uniqueInstitutions);
     setGrades(uniqueGrades);
@@ -59,7 +62,7 @@ export default function StudentList() {
     
     // If institution is selected, only show grades from that institution
     if (filterInstitution) {
-      availableGrades = students.filter(s => s.institution === filterInstitution);
+      availableGrades = students.filter((s) => getInstitutionName(s) === filterInstitution);
     }
     
     const uniqueGrades = [...new Set(availableGrades.map(s => s.grade))].sort();
@@ -79,13 +82,13 @@ export default function StudentList() {
       filtered = filtered.filter(student =>
         student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.primary_guardian_email.toLowerCase().includes(searchTerm.toLowerCase())
+        (student.primary_guardian_email || "").toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Apply institution filter
     if (filterInstitution) {
-      filtered = filtered.filter(student => student.institution === filterInstitution);
+      filtered = filtered.filter((student) => getInstitutionName(student) === filterInstitution);
     }
 
     // Apply grade filter
@@ -99,7 +102,7 @@ export default function StudentList() {
         case "name":
           return `${a.first_name || ""} ${a.last_name || ""}`.localeCompare(`${b.first_name || ""} ${b.last_name || ""}`);
         case "institution":
-          return (a.institution || "").localeCompare(b.institution || "");
+          return getInstitutionName(a).localeCompare(getInstitutionName(b));
         case "grade":
           return (a.grade || "").localeCompare(b.grade || "");
         case "dob":
@@ -210,7 +213,7 @@ export default function StudentList() {
                 <td>{student.primary_guardian_email}</td>
                 <td>{student.gender}</td>
                 <td>{student.dob}</td>
-                <td><span className="institution-badge">{student.institution}</span></td>
+                <td><span className="institution-badge">{getInstitutionName(student)}</span></td>
                 <td>{student.grade}</td>
               </tr>
             ))}

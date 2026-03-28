@@ -22,8 +22,8 @@ def to_json(obj):
     """Helper function to serialize objects to JSON with date support"""
     return json.dumps(obj, cls=DateTimeEncoder)
 
-SERVER_PORT = int(os.getenv("SERVER_PORT", "3080"))
-SERVER_HOST = os.getenv("SERVER_HOST", "localhost")
+SERVER_PORT = int(os.getenv("PORT", os.getenv("SERVER_PORT", "3080")))
+SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
 JWT_SECRET = os.getenv("JWT_SECRET", "your_secret_key_change_in_production")
 
 DB_CONFIG = {
@@ -64,6 +64,14 @@ def fetch_all(query: str, params: Optional[tuple] = None) -> List[Dict[str, Any]
     rows = cur.fetchall()
     cur.close()
     conn.close()
+    return rows  # type: ignore
+
+
+def fetch_all_with_conn(conn, query: str, params: Optional[tuple] = None) -> List[Dict[str, Any]]:
+    cur = conn.cursor(dictionary=True)
+    cur.execute(query, params or ())
+    rows = cur.fetchall()
+    cur.close()
     return rows  # type: ignore
 
 
@@ -232,85 +240,101 @@ class SimpleServer(BaseHTTPRequestHandler):
             case "/api/admin/dashboard-stats":
                 # Admin dashboard overall statistics
                 try:
-                    # Get total counts
-                    total_students = fetch_all("SELECT COUNT(*) as count FROM students")[0]['count']
-                    total_institutions = fetch_all("SELECT COUNT(*) as count FROM institutions")[0]['count']
-                    
-                    # Get current quarter/year (assume current data)
-                    latest_quarter = fetch_all(
-                        "SELECT MAX(grading_quarter) as quarter, MAX(school_year) as year FROM grades"
-                    )[0]
-                    current_quarter = latest_quarter['quarter'] or 1
-                    current_year = latest_quarter['year'] or 2024
-                    
-                    # Calculate average attendance (last 30 days)
-                    cutoff_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-                    attendance_data = fetch_all(
-                        f"""
-                        SELECT 
-                            SUM(CASE WHEN status_code = 1 THEN 1 ELSE 0 END) as present,
-                            COUNT(*) as total
-                        FROM student_attendance
-                        WHERE attendance_date >= '{cutoff_date}'
-                        """
-                    )[0]
-                    
-                    avg_attendance = round((attendance_data['present'] / max(attendance_data['total'], 1)) * 100, 1)
-                    
-                    # Get competency distribution (current quarter)
-                    competencies = ['fine_motor', 'gross_motor', 'social_emotional', 'early_literacy', 'early_numeracy', 'independence']
-                    competency_dist = {}
-                    
-                    for comp in competencies:
-                        comp_data = fetch_all(
-                            f"""
-                            SELECT 
-                                SUM(CASE WHEN {comp} = 'Emerging' THEN 1 ELSE 0 END) as emerging,
-                                SUM(CASE WHEN {comp} = 'Developing' THEN 1 ELSE 0 END) as developing,
-                                SUM(CASE WHEN {comp} = 'Proficient' THEN 1 ELSE 0 END) as proficient,
+                    conn = mysql.connector.connect(**DB_CONFIG)
+                    try:
+                        # Get total counts
+                        total_students = fetch_all_with_conn(conn, "SELECT COUNT(*) as count FROM students")[0]['count']
+                        total_institutions = fetch_all_with_conn(conn, "SELECT COUNT(*) as count FROM institutions")[0]['count']
+
+                        # Get current quarter/year (assume current data)
+                        latest_quarter = fetch_all_with_conn(
+                            conn,
+                            "SELECT MAX(grading_quarter) as quarter, MAX(school_year) as year FROM grades"
+                        )[0]
+                        current_quarter = latest_quarter['quarter'] or 1
+                        current_year = latest_quarter['year'] or datetime.now().year
+
+                        # Calculate average attendance (last 30 days)
+                        cutoff_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+                        attendance_data = fetch_all_with_conn(
+                            conn,
+                            """
+                            SELECT
+                                SUM(CASE WHEN status_code = 1 THEN 1 ELSE 0 END) as present,
                                 COUNT(*) as total
+                            FROM student_attendance
+                            WHERE attendance_date >= %s
+                            """,
+                            (cutoff_date,)
+                        )[0]
+
+                        present_count = attendance_data.get('present') or 0
+                        total_count = attendance_data.get('total') or 0
+                        avg_attendance = round((present_count / max(total_count, 1)) * 100, 1) if total_count > 0 else 0
+
+                        # Build competency distribution from a single grades query
+                        competencies = ['fine_motor', 'gross_motor', 'social_emotional', 'early_literacy', 'early_numeracy', 'independence']
+                        competency_dist = {
+                            comp: {'emerging': 0, 'developing': 0, 'proficient': 0, 'total': 0}
+                            for comp in competencies
+                        }
+
+                        quarter_grades = fetch_all_with_conn(
+                            conn,
+                            """
+                            SELECT
+                                fine_motor,
+                                gross_motor,
+                                social_emotional,
+                                early_literacy,
+                                early_numeracy,
+                                independence
                             FROM grades
                             WHERE school_year = %s AND grading_quarter = %s
                             """,
                             (current_year, current_quarter)
-                        )[0]
-                        
-                        competency_dist[comp] = {
-                            'emerging': comp_data['emerging'] or 0,
-                            'developing': comp_data['developing'] or 0,
-                            'proficient': comp_data['proficient'] or 0,
-                            'total': comp_data['total'] or 0
-                        }
-                    
-                    # Get institution stats
-                    institution_stats = fetch_all(
-                        """
-                        SELECT 
-                            i.id,
-                            i.institution_code,
-                            i.school,
-                            COUNT(DISTINCT s.id) as student_count
-                        FROM institutions i
-                        LEFT JOIN students s ON i.institution_code = s.institution_code
-                        GROUP BY i.id, i.institution_code, i.school
-                        ORDER BY i.institution_code
-                        """
-                    )
-                    
-                    # Add attendance % for each institution
-                    for inst in institution_stats:
-                        inst_attendance = fetch_all(
-                            f"""
-                            SELECT 
-                                SUM(CASE WHEN sa.status_code = 1 THEN 1 ELSE 0 END) as present,
-                                COUNT(*) as total
-                            FROM student_attendance sa
-                            JOIN students s ON sa.student_id = s.id
-                            WHERE s.institution_code = %s AND sa.attendance_date >= '{cutoff_date}'
+                        )
+
+                        for row in quarter_grades:
+                            for comp in competencies:
+                                level = row.get(comp)
+                                if level is None:
+                                    continue
+                                competency_dist[comp]['total'] += 1
+                                if level == 'Emerging':
+                                    competency_dist[comp]['emerging'] += 1
+                                elif level == 'Developing':
+                                    competency_dist[comp]['developing'] += 1
+                                elif level == 'Proficient':
+                                    competency_dist[comp]['proficient'] += 1
+
+                        # Institution stats with attendance in one query
+                        institution_stats = fetch_all_with_conn(
+                            conn,
+                            """
+                            SELECT
+                                i.id,
+                                i.institution_code,
+                                i.school,
+                                COUNT(DISTINCT s.id) AS student_count,
+                                COALESCE(
+                                    ROUND(
+                                        100.0 * SUM(CASE WHEN sa.attendance_date >= %s AND sa.status_code = 1 THEN 1 ELSE 0 END)
+                                        / NULLIF(SUM(CASE WHEN sa.attendance_date >= %s THEN 1 ELSE 0 END), 0),
+                                        1
+                                    ),
+                                    0
+                                ) AS attendance_percent
+                            FROM institutions i
+                            LEFT JOIN students s ON i.institution_code = s.institution_code
+                            LEFT JOIN student_attendance sa ON sa.student_id = s.id
+                            GROUP BY i.id, i.institution_code, i.school
+                            ORDER BY i.institution_code
                             """,
-                            (inst['institution_code'],)
-                        )[0]
-                        inst['attendance_percent'] = round((inst_attendance['present'] / max(inst_attendance['total'], 1)) * 100, 1) if inst_attendance['total'] > 0 else 0
+                            (cutoff_date, cutoff_date)
+                        )
+                    finally:
+                        conn.close()
                     
                     stats = {
                         'totalStudents': total_students,
