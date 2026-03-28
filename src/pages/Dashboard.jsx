@@ -11,6 +11,7 @@ import {
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState({
     students: [],
@@ -22,9 +23,15 @@ export default function Dashboard() {
   const [userRole, setUserRole] = useState('admin');
 
   // Function to refetch all data (can be called after changes)
-  const refetchData = useCallback(async () => {
+  const refetchData = useCallback(async (showLoader = false) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
+      setError(null);
       const [students, institutions, grades, attendance, attendanceMapping] = await Promise.all([
         fetchStudents(),
         fetchInstitutionList(),
@@ -50,25 +57,20 @@ export default function Dashboard() {
       }, 100);
 
     } catch (err) {
-      setError('Failed to load dashboard data');
-      console.error(err);
+      if (showLoader) {
+        setError('Failed to load dashboard data');
+      } else {
+        console.error('Failed to refresh dashboard data:', err);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [userRole]);
 
   useEffect(() => {
-    refetchData();
+    refetchData(true);
   }, [userRole, refetchData]);
-
-  // Auto-refresh data every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetchData();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [refetchData]);
 
   useEffect(() => {
     if (data.students.length > 0) {
@@ -402,12 +404,12 @@ export default function Dashboard() {
             </select>
           </div>
           <button 
-            onClick={refetchData}
-            disabled={loading}
+            onClick={() => refetchData(false)}
+            disabled={loading || refreshing}
             className="refresh-button"
             title="Refresh data from server"
           >
-            {loading ? '⏳ Refreshing...' : '🔄 Refresh Data'}
+            {refreshing ? '⏳ Refreshing...' : '🔄 Refresh Data'}
           </button>
         </div>
       </div>

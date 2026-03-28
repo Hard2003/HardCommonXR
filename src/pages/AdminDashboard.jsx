@@ -8,11 +8,18 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  const loadStats = useCallback(async () => {
+  const loadStats = useCallback(async (showLoader = false) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
+      setError(null);
       const data = await fetchAdminDashboardStats();
       setStats(data);
 
@@ -22,23 +29,19 @@ export default function AdminDashboard() {
         createCompetencyDistributionChart(data);
       }, 100);
     } catch (err) {
-      setError("Failed to load dashboard");
-      console.error(err);
+      if (showLoader) {
+        setError("Failed to load dashboard");
+      } else {
+        console.error("Failed to refresh admin dashboard:", err);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    loadStats();
-  }, [loadStats]);
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadStats();
-    }, 30000);
-    return () => clearInterval(interval);
+    loadStats(true);
   }, [loadStats]);
 
   // Attendance trend chart
@@ -149,8 +152,12 @@ export default function AdminDashboard() {
       {/* Header with refresh button */}
       <div className="dashboard-header">
         <h1>📊 Admin Dashboard</h1>
-        <button className="refresh-button" onClick={loadStats} disabled={loading}>
-          🔄 Refresh Data
+        <button
+          className="refresh-button"
+          onClick={() => loadStats(false)}
+          disabled={loading || refreshing}
+        >
+          {refreshing ? "⏳ Refreshing..." : "🔄 Refresh Data"}
         </button>
       </div>
 

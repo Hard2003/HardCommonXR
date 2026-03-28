@@ -14,12 +14,19 @@ export default function TeacherDashboard() {
   const [grades, setGrades] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const todayDate = new Date().toISOString().split("T")[0];
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (showLoader = false) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
+      setError(null);
       const [stud, grad, att] = await Promise.all([
         fetchStudents(),
         fetchGrades(),
@@ -35,23 +42,19 @@ export default function TeacherDashboard() {
         createPerformanceSnapshotChart(grad);
       }, 100);
     } catch (err) {
-      setError("Failed to load class data");
-      console.error(err);
+      if (showLoader) {
+        setError("Failed to load class data");
+      } else {
+        console.error("Failed to refresh class data:", err);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadData();
-    }, 30000);
-    return () => clearInterval(interval);
+    loadData(true);
   }, [loadData]);
 
   // Calculate performance score for a student
@@ -168,8 +171,12 @@ export default function TeacherDashboard() {
       {/* Header */}
       <div className="dashboard-header">
         <h1>👨‍🏫 My Class Dashboard</h1>
-        <button className="refresh-button" onClick={loadData} disabled={loading}>
-          🔄 Refresh Data
+        <button
+          className="refresh-button"
+          onClick={() => loadData(false)}
+          disabled={loading || refreshing}
+        >
+          {refreshing ? "⏳ Refreshing..." : "🔄 Refresh Data"}
         </button>
       </div>
 

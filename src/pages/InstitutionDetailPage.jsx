@@ -9,11 +9,18 @@ export default function InstitutionDetailPage() {
   const navigate = useNavigate();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  const loadDetail = useCallback(async () => {
+  const loadDetail = useCallback(async (showLoader = false) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
+      setError(null);
       const data = await fetchInstitutionDetail(institutionId);
       setDetail(data);
 
@@ -24,23 +31,19 @@ export default function InstitutionDetailPage() {
         }
       }, 100);
     } catch (err) {
-      setError("Failed to load institution details");
-      console.error(err);
+      if (showLoader) {
+        setError("Failed to load institution details");
+      } else {
+        console.error("Failed to refresh institution details:", err);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [institutionId]);
 
   useEffect(() => {
-    loadDetail();
-  }, [loadDetail]);
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadDetail();
-    }, 30000);
-    return () => clearInterval(interval);
+    loadDetail(true);
   }, [loadDetail]);
 
   const createStudentsByGradeChart = (students) => {
@@ -133,8 +136,12 @@ export default function InstitutionDetailPage() {
             {detail.institution.district}
           </p>
         </div>
-        <button className="refresh-button" onClick={loadDetail} disabled={loading}>
-          🔄 Refresh
+        <button
+          className="refresh-button"
+          onClick={() => loadDetail(false)}
+          disabled={loading || refreshing}
+        >
+          {refreshing ? "⏳ Refreshing..." : "🔄 Refresh"}
         </button>
       </div>
 

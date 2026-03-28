@@ -9,11 +9,18 @@ export default function StudentProfilePage() {
   const navigate = useNavigate();
   const [history, setHistory] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (showLoader = false) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
+      setError(null);
       const data = await fetchStudentHistory(studentId);
       setHistory(data);
 
@@ -23,23 +30,19 @@ export default function StudentProfilePage() {
         createGradeProgressionChart(data.gradesHistory);
       }, 100);
     } catch (err) {
-      setError("Failed to load student profile");
-      console.error(err);
+      if (showLoader) {
+        setError("Failed to load student profile");
+      } else {
+        console.error("Failed to refresh student profile:", err);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [studentId]);
 
   useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadHistory();
-    }, 30000);
-    return () => clearInterval(interval);
+    loadHistory(true);
   }, [loadHistory]);
 
   const createAttendanceHistoryChart = (attendanceHistory) => {
@@ -192,8 +195,12 @@ export default function StudentProfilePage() {
             {student.institution_code}
           </p>
         </div>
-        <button className="refresh-button" onClick={loadHistory} disabled={loading}>
-          🔄 Refresh
+        <button
+          className="refresh-button"
+          onClick={() => loadHistory(false)}
+          disabled={loading || refreshing}
+        >
+          {refreshing ? "⏳ Refreshing..." : "🔄 Refresh"}
         </button>
       </div>
 
