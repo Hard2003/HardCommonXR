@@ -17,7 +17,10 @@ export const DataProvider = ({ children }) => {
   const [cache, setCache] = useState({
     students: null,
     institutions: null,
-    institutionStudents: {}
+    institutionStudents: {},
+    grades: null,
+    attendance: null,
+    attendanceMapping: null,
   });
 
   // Cache students data
@@ -41,6 +44,21 @@ export const DataProvider = ({ children }) => {
     }));
   }, []);
 
+  // Cache grades data
+  const cacheGrades = useCallback((data) => {
+    setCache(prev => ({ ...prev, grades: data }));
+  }, []);
+
+  // Cache attendance data
+  const cacheAttendance = useCallback((data) => {
+    setCache(prev => ({ ...prev, attendance: data }));
+  }, []);
+
+  // Cache attendance mapping
+  const cacheAttendanceMapping = useCallback((data) => {
+    setCache(prev => ({ ...prev, attendanceMapping: data }));
+  }, []);
+
   // Get cached students
   const getCachedStudents = useCallback(() => cache.students, [cache.students]);
 
@@ -53,12 +71,27 @@ export const DataProvider = ({ children }) => {
     [cache.institutionStudents]
   );
 
+  // Get cached grades
+  const getCachedGrades = useCallback(() => cache.grades, [cache.grades]);
+
+  // Get cached attendance
+  const getCachedAttendance = useCallback(() => cache.attendance, [cache.attendance]);
+
+  // Get cached attendance mapping
+  const getCachedAttendanceMapping = useCallback(
+    () => cache.attendanceMapping,
+    [cache.attendanceMapping]
+  );
+
   // Clear all cache (useful for refresh)
   const clearCache = useCallback(() => {
     setCache({
       students: null,
       institutions: null,
-      institutionStudents: {}
+      institutionStudents: {},
+      grades: null,
+      attendance: null,
+      attendanceMapping: null,
     });
   }, []);
 
@@ -67,18 +100,30 @@ export const DataProvider = ({ children }) => {
       cacheStudents,
       cacheInstitutions,
       cacheInstitutionStudents,
+      cacheGrades,
+      cacheAttendance,
+      cacheAttendanceMapping,
       getCachedStudents,
       getCachedInstitutions,
       getCachedInstitutionStudents,
+      getCachedGrades,
+      getCachedAttendance,
+      getCachedAttendanceMapping,
       clearCache,
     }),
     [
       cacheStudents,
       cacheInstitutions,
       cacheInstitutionStudents,
+      cacheGrades,
+      cacheAttendance,
+      cacheAttendanceMapping,
       getCachedStudents,
       getCachedInstitutions,
       getCachedInstitutionStudents,
+      getCachedGrades,
+      getCachedAttendance,
+      getCachedAttendanceMapping,
       clearCache,
     ]
   );

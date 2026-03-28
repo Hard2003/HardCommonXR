@@ -6,10 +6,27 @@ import {
   fetchInstitutionList, 
   fetchGrades, 
   fetchAttendance, 
-  fetchAttendanceMapping 
+  fetchAttendanceMapping,
+  getRole,
 } from "../apiCalls";
+import { useDataCache } from "../context/DataContext";
+
+const hasCachedArray = (value) => Array.isArray(value);
 
 export default function Dashboard() {
+  const {
+    getCachedStudents,
+    getCachedInstitutions,
+    getCachedGrades,
+    getCachedAttendance,
+    getCachedAttendanceMapping,
+    cacheStudents,
+    cacheInstitutions,
+    cacheGrades,
+    cacheAttendance,
+    cacheAttendanceMapping,
+  } = useDataCache();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -20,7 +37,7 @@ export default function Dashboard() {
     attendance: [],
     attendanceMapping: []
   });
-  const [userRole, setUserRole] = useState('admin');
+  const [userRole, setUserRole] = useState(getRole() || 'admin');
 
   // Function to refetch all data (can be called after changes)
   const refetchData = useCallback(async (showLoader = false) => {
@@ -39,6 +56,12 @@ export default function Dashboard() {
         fetchAttendance(),
         fetchAttendanceMapping()
       ]);
+
+      cacheStudents(students);
+      cacheInstitutions(institutions);
+      cacheGrades(grades);
+      cacheAttendance(attendance);
+      cacheAttendanceMapping(attendanceMapping);
 
       setData({ students, institutions, grades, attendance, attendanceMapping });
 
@@ -66,11 +89,53 @@ export default function Dashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userRole]);
+  }, [
+    userRole,
+    cacheStudents,
+    cacheInstitutions,
+    cacheGrades,
+    cacheAttendance,
+    cacheAttendanceMapping,
+  ]);
 
   useEffect(() => {
+    const cachedStudents = getCachedStudents();
+    const cachedInstitutions = getCachedInstitutions();
+    const cachedGrades = getCachedGrades();
+    const cachedAttendance = getCachedAttendance();
+    const cachedAttendanceMapping = getCachedAttendanceMapping();
+
+    const hasCompleteCache = [
+      cachedStudents,
+      cachedInstitutions,
+      cachedGrades,
+      cachedAttendance,
+      cachedAttendanceMapping,
+    ].every(hasCachedArray);
+
+    if (hasCompleteCache) {
+      setData({
+        students: cachedStudents,
+        institutions: cachedInstitutions,
+        grades: cachedGrades,
+        attendance: cachedAttendance,
+        attendanceMapping: cachedAttendanceMapping,
+      });
+      setLoading(false);
+      refetchData(false);
+      return;
+    }
+
     refetchData(true);
-  }, [userRole, refetchData]);
+  }, [
+    userRole,
+    getCachedStudents,
+    getCachedInstitutions,
+    getCachedGrades,
+    getCachedAttendance,
+    getCachedAttendanceMapping,
+    refetchData,
+  ]);
 
   useEffect(() => {
     if (data.students.length > 0) {

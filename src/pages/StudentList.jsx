@@ -7,9 +7,12 @@ const getInstitutionName = (student) =>
   student.institution || student.school || student.institution_code || "Unknown";
 
 export default function StudentList() {
-  const [students, setStudents] = useState([]);
-  const [filteredStudents, setFilteredStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getCachedStudents, cacheStudents } = useDataCache();
+  const initialStudents = getCachedStudents() || [];
+
+  const [students, setStudents] = useState(initialStudents);
+  const [filteredStudents, setFilteredStudents] = useState(initialStudents);
+  const [loading, setLoading] = useState(initialStudents.length === 0);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterInstitution, setFilterInstitution] = useState("");
@@ -17,7 +20,6 @@ export default function StudentList() {
   const [sortBy, setSortBy] = useState("name");
   const [institutions, setInstitutions] = useState([]);
   const [grades, setGrades] = useState([]);
-  const { getCachedStudents, cacheStudents } = useDataCache();
 
   const extractFilters = useCallback((data) => {
     const uniqueInstitutions = [...new Set(data.map((s) => getInstitutionName(s)))].sort();
@@ -29,8 +31,6 @@ export default function StudentList() {
   useEffect(() => {
     const loadStudents = async () => {
       try {
-        setLoading(true);
-        
         // Check cache first
         const cachedData = getCachedStudents();
         if (cachedData) {
@@ -41,6 +41,7 @@ export default function StudentList() {
         }
 
         // Fetch from API if not in cache
+  setLoading(true);
         const data = await fetchStudents();
         setStudents(data);
         cacheStudents(data);

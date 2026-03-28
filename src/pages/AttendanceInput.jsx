@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { fetchStudents, fetchAttendanceMapping, recordAttendance } from '../apiCalls';
+import { useDataCache } from '../context/DataContext';
 import '../pages/AttendanceInput.css';
 
 const AttendanceInput = () => {
-  const [students, setStudents] = useState([]);
-  const [attendanceMapping, setAttendanceMapping] = useState([]);
+  const {
+    getCachedStudents,
+    cacheStudents,
+    getCachedAttendanceMapping,
+    cacheAttendanceMapping,
+  } = useDataCache();
+  const cachedStudents = getCachedStudents();
+  const cachedMapping = getCachedAttendanceMapping();
+
+  const [students, setStudents] = useState(cachedStudents || []);
+  const [attendanceMapping, setAttendanceMapping] = useState(cachedMapping || []);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterInstitution, setFilterInstitution] = useState('');
   const [institutions, setInstitutions] = useState([]);
   const [attendance, setAttendance] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!(cachedStudents && cachedMapping));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -18,13 +28,28 @@ const AttendanceInput = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(true);
+        const cachedStudentsData = getCachedStudents();
+        const cachedMappingData = getCachedAttendanceMapping();
+
+        const hasCachedData = cachedStudentsData && cachedMappingData;
+        if (!hasCachedData) {
+          setLoading(true);
+        }
+
         const [studentsData, mappingData] = await Promise.all([
-          fetchStudents(),
-          fetchAttendanceMapping()
+          cachedStudentsData || fetchStudents(),
+          cachedMappingData || fetchAttendanceMapping()
         ]);
+
         setStudents(studentsData);
         setAttendanceMapping(mappingData);
+
+        if (!cachedStudentsData) {
+          cacheStudents(studentsData);
+        }
+        if (!cachedMappingData) {
+          cacheAttendanceMapping(mappingData);
+        }
         
         // Extract unique institutions
         const uniqueInstitutions = [...new Set(studentsData.map(s => s.institution_code || s.institution || 'Unknown'))].sort();
@@ -43,7 +68,12 @@ const AttendanceInput = () => {
       }
     };
     loadData();
-  }, []);
+  }, [
+    getCachedStudents,
+    cacheStudents,
+    getCachedAttendanceMapping,
+    cacheAttendanceMapping,
+  ]);
 
   const handleStatusChange = (studentId, status) => {
     setAttendance(prev => ({

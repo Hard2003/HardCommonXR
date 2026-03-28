@@ -7,8 +7,6 @@ import InstitutionList from "./pages/InstitutionList";
 import StudentList from "./pages/StudentList";
 import InstitutionStudentRoster from "./pages/InstitutionStudentRoster";
 import Dashboard from "./pages/Dashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import TeacherDashboard from "./pages/TeacherDashboard";
 import InstitutionDetailPage from "./pages/InstitutionDetailPage";
 import GradeDetailPage from "./pages/GradeDetailPage";
 import StudentProfilePage from "./pages/StudentProfilePage";
@@ -16,26 +14,12 @@ import AttendanceInput from "./pages/AttendanceInput";
 import GradesInput from "./pages/GradesInput";
 import GradesView from "./pages/GradesView";
 import { DataProvider } from "./context/DataContext";
-import { getToken, getRole } from "./apiCalls";
+import { getToken } from "./apiCalls";
 
 // Private Route component for protected pages
 const PrivateRoute = ({ children }) => {
   const token = getToken();
   return token ? children : <Navigate to="/login" replace />;
-};
-
-// Role-based Dashboard Router
-const DashboardRouter = () => {
-  const role = getRole();
-  
-  if (role === 'admin') {
-    return <AdminDashboard />;
-  } else if (role === 'teacher') {
-    return <TeacherDashboard />;
-  }
-  
-  // Fallback to generic dashboard
-  return <Dashboard />;
 };
 
 export default function App() {
@@ -68,7 +52,7 @@ export default function App() {
             />
             <Route 
               path="/dashboard" 
-              element={<PrivateRoute><DashboardRouter /></PrivateRoute>} 
+              element={<PrivateRoute><Dashboard /></PrivateRoute>} 
             />
             <Route 
               path="/institution/:institutionId/detail" 

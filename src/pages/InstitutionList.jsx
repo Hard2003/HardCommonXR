@@ -5,21 +5,21 @@ import { useDataCache } from "../context/DataContext";
 import "./InstitutionList.css";
 
 export default function InstitutionList() {
-  const [institutions, setInstitutions] = useState([]);
-  const [filteredInstitutions, setFilteredInstitutions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getCachedInstitutions, cacheInstitutions } = useDataCache();
+  const initialInstitutions = getCachedInstitutions() || [];
+
+  const [institutions, setInstitutions] = useState(initialInstitutions);
+  const [filteredInstitutions, setFilteredInstitutions] = useState(initialInstitutions);
+  const [loading, setLoading] = useState(initialInstitutions.length === 0);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDistrict, setFilterDistrict] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [districts, setDistricts] = useState([]);
-  const { getCachedInstitutions, cacheInstitutions } = useDataCache();
 
   useEffect(() => {
     const loadInstitutions = async () => {
       try {
-        setLoading(true);
-        
         // Check cache first
         const cachedData = getCachedInstitutions();
         if (cachedData) {
@@ -30,6 +30,7 @@ export default function InstitutionList() {
         }
 
         // Fetch from API if not in cache
+  setLoading(true);
         const data = await fetchInstitutionList();
         setInstitutions(data);
         cacheInstitutions(data);

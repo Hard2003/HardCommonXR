@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { fetchStudents, recordGrades } from '../apiCalls';
+import { useDataCache } from '../context/DataContext';
 import '../pages/GradesInput.css';
 
 const GradesInput = () => {
-  const [students, setStudents] = useState([]);
+  const { getCachedStudents, cacheStudents } = useDataCache();
+  const cachedStudents = getCachedStudents();
+
+  const [students, setStudents] = useState(cachedStudents || []);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [schoolYear, setSchoolYear] = useState(new Date().getFullYear());
   const [quarter, setQuarter] = useState('Q1');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedStudents);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -33,9 +37,18 @@ const GradesInput = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(false);
-        const studentsData = await fetchStudents();
+        const cachedData = getCachedStudents();
+        if (!cachedData) {
+          setLoading(true);
+        }
+
+        const studentsData = cachedData || await fetchStudents();
         setStudents(studentsData);
+
+        if (!cachedData) {
+          cacheStudents(studentsData);
+        }
+
         if (studentsData.length > 0) {
           setSelectedStudent(studentsData[0].id);
         }
@@ -46,7 +59,7 @@ const GradesInput = () => {
       }
     };
     loadData();
-  }, []);
+  }, [getCachedStudents, cacheStudents]);
 
   const handleGradeChange = (category, value) => {
     // Only allow numbers 0-100

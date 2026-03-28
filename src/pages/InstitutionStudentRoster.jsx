@@ -5,15 +5,16 @@ import { useDataCache } from "../context/DataContext";
 
 export default function InstitutionStudentRoster() {
   const { institution } = useParams();
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { getCachedInstitutionStudents, cacheInstitutionStudents } = useDataCache();
+  const initialStudents = institution ? (getCachedInstitutionStudents(institution) || []) : [];
+
+  const [students, setStudents] = useState(initialStudents);
+  const [loading, setLoading] = useState(initialStudents.length === 0);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadInstitutionStudents = async () => {
       try {
-        setLoading(true);
         console.log('Loading students for institution:', institution);
         
         // Check cache first
@@ -26,6 +27,7 @@ export default function InstitutionStudentRoster() {
         }
 
         // Fetch from API if not in cache
+  setLoading(true);
         console.log('Fetching from API for institution:', institution);
         const data = await fetchInstitutionStudents(institution);
         console.log('API returned:', data.length, 'students');

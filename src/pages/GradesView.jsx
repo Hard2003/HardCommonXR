@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { fetchGrades, fetchStudents } from '../apiCalls';
+import { useDataCache } from '../context/DataContext';
 import './GradesView.css';
 
 const GradesView = () => {
-  const [grades, setGrades] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [filteredGrades, setFilteredGrades] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    getCachedGrades,
+    cacheGrades,
+    getCachedStudents,
+    cacheStudents,
+  } = useDataCache();
+  const cachedGrades = getCachedGrades();
+  const cachedStudents = getCachedStudents();
+
+  const [grades, setGrades] = useState(cachedGrades || []);
+  const [students, setStudents] = useState(cachedStudents || []);
+  const [filteredGrades, setFilteredGrades] = useState(cachedGrades || []);
+  const [loading, setLoading] = useState(!(cachedGrades && cachedStudents));
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStudent, setFilterStudent] = useState('');
@@ -17,13 +27,28 @@ const GradesView = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(true);
+        const gradesFromCache = getCachedGrades();
+        const studentsFromCache = getCachedStudents();
+
+        const hasAllCache = gradesFromCache && studentsFromCache;
+        if (!hasAllCache) {
+          setLoading(true);
+        }
+
         const [gradesData, studentsData] = await Promise.all([
-          fetchGrades(),
-          fetchStudents()
+          gradesFromCache || fetchGrades(),
+          studentsFromCache || fetchStudents()
         ]);
+
         setGrades(gradesData);
         setStudents(studentsData);
+
+        if (!gradesFromCache) {
+          cacheGrades(gradesData);
+        }
+        if (!studentsFromCache) {
+          cacheStudents(studentsData);
+        }
       } catch (err) {
         setError('Failed to load grades data');
         console.error(err);
@@ -32,7 +57,7 @@ const GradesView = () => {
       }
     };
     loadData();
-  }, []);
+  }, [getCachedGrades, cacheGrades, getCachedStudents, cacheStudents]);
 
   useEffect(() => {
     let filtered = grades.map(grade => {
