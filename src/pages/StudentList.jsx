@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { fetchStudents } from "../apiCalls";
 import { useDataCache } from "../context/DataContext";
 import "./StudentList.css";
+
+const getInstitutionName = (student) =>
+  student.institution || student.school || student.institution_code || "Unknown";
 
 export default function StudentList() {
   const [students, setStudents] = useState([]);
@@ -16,8 +19,12 @@ export default function StudentList() {
   const [grades, setGrades] = useState([]);
   const { getCachedStudents, cacheStudents } = useDataCache();
 
-  const getInstitutionName = (student) =>
-    student.institution || student.school || student.institution_code || "Unknown";
+  const extractFilters = useCallback((data) => {
+    const uniqueInstitutions = [...new Set(data.map((s) => getInstitutionName(s)))].sort();
+    const uniqueGrades = [...new Set(data.map((s) => s.grade))].sort();
+    setInstitutions(uniqueInstitutions);
+    setGrades(uniqueGrades);
+  }, []);
 
   useEffect(() => {
     const loadStudents = async () => {
@@ -47,14 +54,7 @@ export default function StudentList() {
     };
 
     loadStudents();
-  }, [getCachedStudents, cacheStudents]);
-
-  const extractFilters = (data) => {
-    const uniqueInstitutions = [...new Set(data.map((s) => getInstitutionName(s)))].sort();
-    const uniqueGrades = [...new Set(data.map(s => s.grade))].sort();
-    setInstitutions(uniqueInstitutions);
-    setGrades(uniqueGrades);
-  };
+  }, [getCachedStudents, cacheStudents, extractFilters]);
 
   // Update available grades based on selected institution
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function StudentList() {
   }, [filterInstitution, filterGrade, students]);
 
   useEffect(() => {
-    let filtered = students;
+    let filtered = [...students];
 
     // Apply search filter
     if (searchTerm) {
