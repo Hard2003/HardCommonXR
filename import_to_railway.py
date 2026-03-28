@@ -2,6 +2,9 @@
 """
 Import local database backup to Railway MySQL - Smart SQL parser
 """
+import argparse
+import os
+
 import mysql.connector
 
 # Railway credentials (using external proxy URL)
@@ -13,8 +16,22 @@ config = {
     'database': 'railway'
 }
 
-# Read backup file
-backup_file = r'c:\Users\Hard Patel\OneDrive\Desktop\CPT\ReactProject-20251229T130038Z-3-001\ReactProject\tcxr_cares_backup.sql'
+parser = argparse.ArgumentParser(
+    description="Import a SQL dump file into Railway MySQL"
+)
+parser.add_argument(
+    "--file",
+    dest="backup_file",
+    required=True,
+    help="Path to SQL dump file"
+)
+args = parser.parse_args()
+backup_file = args.backup_file
+
+if not os.path.exists(backup_file):
+    print(f"❌ ERROR: SQL file not found: {backup_file}")
+    print("Usage: python import_to_railway.py --file path/to/dump.sql")
+    raise SystemExit(1)
 
 print("Connecting to Railway MySQL...")
 try:
